@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "dgSpecHash": "InJx8kqAYXc=",
+  "success": true,
+  "projectFilePath": "D:\\Projects\\vibe\\rigo\\backend\\backend.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\grgbi\\.nuget\\packages\\microsoft.aspnetcore.openapi\\10.0.3\\microsoft.aspnetcore.openapi.10.0.3.nupkg.sha512",
+    "C:\\Users\\grgbi\\.nuget\\packages\\microsoft.entityframeworkcore\\10.0.10\\microsoft.entityframeworkcore.10.0.10.nupkg.sha512",
+    "C:\\Users\\grgbi\\.nuget\\packages\\microsoft.entityframeworkcore.abstractions\\10.0.10\\microsoft.entityframeworkcore.abstractions.10.0.10.nupkg.sha512",
+    "C:\\Users\\grgbi\\.nuget\\packages\\microsoft.entityframeworkcore.analyzers\\10.0.10\\microsoft.entityframeworkcore.analyzers.10.0.10.nupkg.sha512",
+    "C:\\Users\\grgbi\\.nuget\\packages\\microsoft.entityframeworkcore.inmemory\\10.0.10\\microsoft.entityframeworkcore.inmemory.10.0.10.nupkg.sha512",
+    "C:\\Users\\grgbi\\.nuget\\packages\\microsoft.extensions.ai\\10.8.3\\microsoft.extensions.ai.10.8.3.nupkg.sha512",
+    "C:\\Users\\grgbi\\.nuget\\packages\\microsoft.extensions.ai.abstractions\\10.8.3\\microsoft.extensions.ai.abstractions.10.8.3.nupkg.sha512",
+    "C:\\Users\\grgbi\\.nuget\\packages\\microsoft.openapi\\2.0.0\\microsoft.openapi.2.0.0.nupkg.sha512",
+    "C:\\Users\\grgbi\\.nuget\\packages\\system.numerics.tensors\\10.0.10\\system.numerics.tensors.10.0.10.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1903",
+      "level": "Warning",
+      "message": "Package 'Microsoft.OpenApi' 2.0.0 has a known high severity vulnerability, https://github.com/advisories/GHSA-v5pm-xwqc-g5wc",
+      "projectPath": "D:\\Projects\\vibe\\rigo\\backend\\backend.csproj",
+      "warningLevel": 1,
+      "filePath": "D:\\Projects\\vibe\\rigo\\backend\\backend.csproj",
+      "libraryId": "Microsoft.OpenApi",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    }
+  ]
+}

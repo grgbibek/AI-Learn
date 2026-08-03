@@ -1,0 +1,164 @@
+<div class="task-board-container">
+  <!-- Stats & Controls Bar -->
+  <header class="board-header">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-value">{{ service.stats().total }}</span>
+        <span class="stat-label">Total Tasks</span>
+      </div>
+      <div class="stat-card todo-card">
+        <span class="stat-value">{{ service.stats().todo }}</span>
+        <span class="stat-label">To Do</span>
+      </div>
+      <div class="stat-card progress-card">
+        <span class="stat-value">{{ service.stats().inProgress }}</span>
+        <span class="stat-label">In Progress</span>
+      </div>
+      <div class="stat-card done-card">
+        <span class="stat-value">{{ service.stats().done }}</span>
+        <span class="stat-label">Completed</span>
+      </div>
+    </div>
+
+    <div class="action-bar">
+      <div class="search-box">
+        <input
+          type="text"
+          placeholder="Search tasks by title or description..."
+          (input)="onSearch($event)"
+          class="search-input"
+        />
+      </div>
+
+      <div class="filter-tabs">
+        <button
+          [class.active]="service.selectedStatusFilter() === 'All'"
+          (click)="onFilterStatus('All')"
+          class="filter-btn">
+          All
+        </button>
+        <button
+          [class.active]="service.selectedStatusFilter() === StatusEnum.Todo"
+          (click)="onFilterStatus(StatusEnum.Todo)"
+          class="filter-btn">
+          To Do
+        </button>
+        <button
+          [class.active]="service.selectedStatusFilter() === StatusEnum.InProgress"
+          (click)="onFilterStatus(StatusEnum.InProgress)"
+          class="filter-btn">
+          In Progress
+        </button>
+        <button
+          [class.active]="service.selectedStatusFilter() === StatusEnum.Done"
+          (click)="onFilterStatus(StatusEnum.Done)"
+          class="filter-btn">
+          Done
+        </button>
+      </div>
+
+      <button (click)="toggleForm()" class="btn-primary">
+        + New Work Item
+      </button>
+    </div>
+  </header>
+
+  <!-- Error Alert -->
+  @if (service.error()) {
+    <div class="alert-error">
+      <span>⚠️ {{ service.error() }}</span>
+      <button (click)="service.loadWorkItems()" class="btn-retry">Retry</button>
+    </div>
+  }
+
+  <!-- New Task Modal / Drawer -->
+  @if (showForm()) {
+    <div class="modal-backdrop" (click)="toggleForm()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <h3>Create New Work Item</h3>
+        <form [formGroup]="itemForm" (ngSubmit)="onSubmit()">
+          <div class="form-group">
+            <label>Title *</label>
+            <input type="text" formControlName="title" placeholder="e.g. Implement Jwt Refresh Tokens" class="form-input" />
+          </div>
+
+          <div class="form-group">
+            <label>Description</label>
+            <textarea formControlName="description" rows="3" placeholder="Provide context or acceptance criteria..." class="form-input"></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Priority</label>
+              <select formControlName="priority" class="form-input">
+                <option [value]="PriorityEnum.Low">Low</option>
+                <option [value]="PriorityEnum.Medium">Medium</option>
+                <option [value]="PriorityEnum.High">High</option>
+                <option [value]="PriorityEnum.Critical">Critical</option>
+              </select>
+            </div>
+
+            <div class="form-group flex-1">
+              <label>Due Date</label>
+              <input type="date" formControlName="dueDate" class="form-input" />
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" (click)="toggleForm()" class="btn-secondary">Cancel</button>
+            <button type="submit" [disabled]="itemForm.invalid" class="btn-primary">Create Item</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Task Items Grid -->
+  <main class="tasks-grid">
+    @for (item of service.items(); track item.id) {
+      <article class="task-card" [class.done-item]="item.status === StatusEnum.Done">
+        <div class="task-header">
+          <span class="priority-badge" [class]="'priority-' + item.priority">
+            {{ getPriorityLabel(item.priority) }}
+          </span>
+          <span class="status-badge" [class]="'status-' + item.status">
+            {{ getStatusLabel(item.status) }}
+          </span>
+        </div>
+
+        <h4 class="task-title">{{ item.title }}</h4>
+        @if (item.description) {
+          <p class="task-desc">{{ item.description }}</p>
+        }
+
+        <div class="task-footer">
+          <div class="task-meta">
+            @if (item.dueDate) {
+              <span class="due-date">📅 {{ item.dueDate | date:'mediumDate' }}</span>
+            }
+          </div>
+
+          <div class="task-actions">
+            @if (item.status === StatusEnum.Todo) {
+              <button (click)="service.updateStatus(item.id, item, StatusEnum.InProgress)" class="btn-action">
+                ▶ Start
+              </button>
+            }
+            @if (item.status === StatusEnum.InProgress) {
+              <button (click)="service.updateStatus(item.id, item, StatusEnum.Done)" class="btn-action btn-success">
+                ✓ Complete
+              </button>
+            }
+            <button (click)="service.deleteWorkItem(item.id)" class="btn-action btn-danger" title="Delete">
+              🗑
+            </button>
+          </div>
+        </div>
+      </article>
+    } @empty {
+      <div class="empty-state">
+        <p>No work items found matching your filters.</p>
+      </div>
+    }
+  </main>
+</div>
