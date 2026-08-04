@@ -20,8 +20,13 @@ var ollamaChatModel  = builder.Configuration["Ollama:ChatModel"]      ?? "llama3
 var ollamaEmbedModel = builder.Configuration["Ollama:EmbeddingModel"] ?? "nomic-embed-text";
 
 // IChatClient → real local Llama model
+// UseFunctionInvocation() auto-executes tool calls (e.g. workload-assistant) and loops until final text is produced.
+// Cast to IChatClient first since OllamaApiClient also implements IEmbeddingGenerator, making AsBuilder() ambiguous.
 builder.Services.AddSingleton<IChatClient>(
-    new OllamaApiClient(ollamaUri, ollamaChatModel));
+    ((IChatClient)new OllamaApiClient(ollamaUri, ollamaChatModel))
+        .AsBuilder()
+        .UseFunctionInvocation()
+        .Build());
 
 // Register Vector Math & Embeddings Services (Phase 3)
 builder.Services.AddSingleton<VectorMathService>();

@@ -63,6 +63,28 @@
     </div>
   </header>
 
+  <!-- AI Workload Assistant -->
+  <section class="ai-assistant-bar">
+    <span class="ai-assistant-icon">✨</span>
+    <input
+      type="text"
+      placeholder="Ask the AI workload assistant, e.g. 'What high priority tasks are left?'"
+      [value]="assistantPrompt()"
+      (input)="onAssistantPromptChange($event)"
+      (keydown.enter)="onAskAssistant()"
+      class="ai-assistant-input"
+    />
+    <button (click)="onAskAssistant()" [disabled]="ai.assistantLoading()" class="btn-secondary">
+      {{ ai.assistantLoading() ? 'Thinking…' : 'Ask' }}
+    </button>
+  </section>
+  @if (ai.assistantResponse(); as res) {
+    <div class="ai-assistant-response">
+      <strong>Tool used:</strong> {{ res.toolRegistered }}
+      <p>{{ res.response }}</p>
+    </div>
+  }
+
   <!-- Error Alert -->
   @if (service.error()) {
     <div class="alert-error">
@@ -149,6 +171,9 @@
                 ✓ Complete
               </button>
             }
+            <button (click)="onSuggestSubtasks(item)" class="btn-action btn-ai" title="AI Suggest Subtasks">
+              ✨ AI Assist
+            </button>
             <button (click)="service.deleteWorkItem(item.id)" class="btn-action btn-danger" title="Delete">
               🗑
             </button>
@@ -161,4 +186,38 @@
       </div>
     }
   </main>
+
+  <!-- AI Subtask Analysis Modal -->
+  @if (activeAnalysisItemId() !== null) {
+    <div class="modal-backdrop" (click)="closeAnalysis()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <h3>✨ AI Subtask Analysis</h3>
+
+        @if (ai.loading()) {
+          <p class="ai-loading">Analyzing with local LLM…</p>
+        }
+        @if (ai.error()) {
+          <p class="ai-error">⚠️ {{ ai.error() }}</p>
+        }
+        @if (ai.analysis(); as analysis) {
+          <p class="ai-original-title">{{ analysis.originalTitle }}</p>
+          <ul class="ai-subtask-list">
+            @for (subtask of analysis.subtasks; track subtask) {
+              <li>{{ subtask }}</li>
+            }
+          </ul>
+          <div class="ai-meta-row">
+            <span class="ai-hours-badge">⏱ {{ analysis.estimatedTotalHours }}h estimated</span>
+            <span class="ai-complexity-badge" [class]="getComplexityClass(analysis.complexityLevel)">
+              {{ analysis.complexityLevel }} complexity
+            </span>
+          </div>
+        }
+
+        <div class="modal-actions">
+          <button type="button" (click)="closeAnalysis()" class="btn-secondary">Close</button>
+        </div>
+      </div>
+    </div>
+  }
 </div>

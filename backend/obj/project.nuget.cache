@@ -1,28 +1,28 @@
 {
   "version": 2,
-  "dgSpecHash": "3RogqdpKfWE=",
+  "dgSpecHash": "nyqIsG77ip4=",
   "success": true,
-  "projectFilePath": "D:\\Projects\\vibe\\rigo\\backend\\backend.csproj",
+  "projectFilePath": "C:\\Users\\bibekgurung\\Desktop\\Rapid\\Extras\\AI-Learn\\backend\\backend.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\grgbi\\.nuget\\packages\\microsoft.aspnetcore.openapi\\10.0.3\\microsoft.aspnetcore.openapi.10.0.3.nupkg.sha512",
-    "C:\\Users\\grgbi\\.nuget\\packages\\microsoft.entityframeworkcore\\10.0.10\\microsoft.entityframeworkcore.10.0.10.nupkg.sha512",
-    "C:\\Users\\grgbi\\.nuget\\packages\\microsoft.entityframeworkcore.abstractions\\10.0.10\\microsoft.entityframeworkcore.abstractions.10.0.10.nupkg.sha512",
-    "C:\\Users\\grgbi\\.nuget\\packages\\microsoft.entityframeworkcore.analyzers\\10.0.10\\microsoft.entityframeworkcore.analyzers.10.0.10.nupkg.sha512",
-    "C:\\Users\\grgbi\\.nuget\\packages\\microsoft.entityframeworkcore.inmemory\\10.0.10\\microsoft.entityframeworkcore.inmemory.10.0.10.nupkg.sha512",
-    "C:\\Users\\grgbi\\.nuget\\packages\\microsoft.extensions.ai\\10.8.3\\microsoft.extensions.ai.10.8.3.nupkg.sha512",
-    "C:\\Users\\grgbi\\.nuget\\packages\\microsoft.extensions.ai.abstractions\\10.8.3\\microsoft.extensions.ai.abstractions.10.8.3.nupkg.sha512",
-    "C:\\Users\\grgbi\\.nuget\\packages\\microsoft.openapi\\2.0.0\\microsoft.openapi.2.0.0.nupkg.sha512",
-    "C:\\Users\\grgbi\\.nuget\\packages\\ollamasharp\\5.4.30\\ollamasharp.5.4.30.nupkg.sha512",
-    "C:\\Users\\grgbi\\.nuget\\packages\\system.numerics.tensors\\10.0.10\\system.numerics.tensors.10.0.10.nupkg.sha512"
+    "C:\\Users\\bibekgurung\\.nuget\\packages\\microsoft.aspnetcore.openapi\\10.0.3\\microsoft.aspnetcore.openapi.10.0.3.nupkg.sha512",
+    "C:\\Users\\bibekgurung\\.nuget\\packages\\microsoft.entityframeworkcore\\10.0.10\\microsoft.entityframeworkcore.10.0.10.nupkg.sha512",
+    "C:\\Users\\bibekgurung\\.nuget\\packages\\microsoft.entityframeworkcore.abstractions\\10.0.10\\microsoft.entityframeworkcore.abstractions.10.0.10.nupkg.sha512",
+    "C:\\Users\\bibekgurung\\.nuget\\packages\\microsoft.entityframeworkcore.analyzers\\10.0.10\\microsoft.entityframeworkcore.analyzers.10.0.10.nupkg.sha512",
+    "C:\\Users\\bibekgurung\\.nuget\\packages\\microsoft.entityframeworkcore.inmemory\\10.0.10\\microsoft.entityframeworkcore.inmemory.10.0.10.nupkg.sha512",
+    "C:\\Users\\bibekgurung\\.nuget\\packages\\microsoft.extensions.ai\\10.8.3\\microsoft.extensions.ai.10.8.3.nupkg.sha512",
+    "C:\\Users\\bibekgurung\\.nuget\\packages\\microsoft.extensions.ai.abstractions\\10.8.3\\microsoft.extensions.ai.abstractions.10.8.3.nupkg.sha512",
+    "C:\\Users\\bibekgurung\\.nuget\\packages\\microsoft.openapi\\2.0.0\\microsoft.openapi.2.0.0.nupkg.sha512",
+    "C:\\Users\\bibekgurung\\.nuget\\packages\\ollamasharp\\5.4.30\\ollamasharp.5.4.30.nupkg.sha512",
+    "C:\\Users\\bibekgurung\\.nuget\\packages\\system.numerics.tensors\\10.0.10\\system.numerics.tensors.10.0.10.nupkg.sha512"
   ],
   "logs": [
     {
       "code": "NU1903",
       "level": "Warning",
       "message": "Package 'Microsoft.OpenApi' 2.0.0 has a known high severity vulnerability, https://github.com/advisories/GHSA-v5pm-xwqc-g5wc",
-      "projectPath": "D:\\Projects\\vibe\\rigo\\backend\\backend.csproj",
+      "projectPath": "C:\\Users\\bibekgurung\\Desktop\\Rapid\\Extras\\AI-Learn\\backend\\backend.csproj",
       "warningLevel": 1,
-      "filePath": "D:\\Projects\\vibe\\rigo\\backend\\backend.csproj",
+      "filePath": "C:\\Users\\bibekgurung\\Desktop\\Rapid\\Extras\\AI-Learn\\backend\\backend.csproj",
       "libraryId": "Microsoft.OpenApi",
       "targetGraphs": [
         "net10.0"
