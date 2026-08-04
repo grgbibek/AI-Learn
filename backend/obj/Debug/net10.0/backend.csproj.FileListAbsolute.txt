@@ -37,3 +37,5 @@ D:\Projects\vibe\rigo\backend\obj\Debug\net10.0\ref\backend.dll
 D:\Projects\vibe\rigo\backend\bin\Debug\net10.0\Microsoft.Extensions.AI.dll
 D:\Projects\vibe\rigo\backend\bin\Debug\net10.0\Microsoft.Extensions.AI.Abstractions.dll
 D:\Projects\vibe\rigo\backend\bin\Debug\net10.0\System.Numerics.Tensors.dll
+D:\Projects\vibe\rigo\backend\obj\Debug\net10.0\backend.sourcelink.json
+D:\Projects\vibe\rigo\backend\bin\Debug\net10.0\OllamaSharp.dll

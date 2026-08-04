@@ -10,7 +10,8 @@
         "dependencies": {
           "Microsoft.AspNetCore.OpenApi": "10.0.3",
           "Microsoft.EntityFrameworkCore.InMemory": "10.0.10",
-          "Microsoft.Extensions.AI": "10.8.3"
+          "Microsoft.Extensions.AI": "10.8.3",
+          "OllamaSharp": "5.4.30"
         },
         "runtime": {
           "backend.dll": {}
@@ -85,6 +86,18 @@
           }
         }
       },
+      "OllamaSharp/5.4.30": {
+        "dependencies": {
+          "Microsoft.Extensions.AI": "10.8.3",
+          "Microsoft.Extensions.AI.Abstractions": "10.8.3"
+        },
+        "runtime": {
+          "lib/net10.0/OllamaSharp.dll": {
+            "assemblyVersion": "5.4.30.0",
+            "fileVersion": "5.4.30.0"
+          }
+        }
+      },
       "System.Numerics.Tensors/10.0.10": {
         "runtime": {
           "lib/net10.0/System.Numerics.Tensors.dll": {
@@ -149,6 +162,13 @@
       "sha512": "sha512-GGYLfzV/G/ct80OZ45JxnWP7NvMX1BCugn/lX7TH5o0lcVaviavsLMTxmFV2AybXWjbi3h6FF1vgZiTK6PXndw==",
       "path": "microsoft.openapi/2.0.0",
       "hashPath": "microsoft.openapi.2.0.0.nupkg.sha512"
+    },
+    "OllamaSharp/5.4.30": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-r/dtO3cm/D+OCB1A3dPcA//YnC9Cak3SSSK1dxfvG9RbEKjMezf3l04Ag1j8tiDul/oGn9nb8+fIwlrg0KOkww==",
+      "path": "ollamasharp/5.4.30",
+      "hashPath": "ollamasharp.5.4.30.nupkg.sha512"
     },
     "System.Numerics.Tensors/10.0.10": {
       "type": "package",

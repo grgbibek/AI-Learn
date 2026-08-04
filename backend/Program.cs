@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
+using OllamaSharp;
 using TaskFlow.Api.Data;
 using TaskFlow.Api.Endpoints;
 
@@ -9,11 +10,29 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 
-// Register IChatClient from Microsoft.Extensions.AI
-// Defaults to DevMockChatClient for local dev without external API keys.
-// To use Ollama or OpenAI, simply swap the registration:
-// builder.Services.AddSingleton<IChatClient>(new OllamaChatClient("http://localhost:11434", "llama3.3"));
-builder.Services.AddSingleton<IChatClient, DevMockChatClient>();
+// ─── Ollama Client (Real Local LLM) ──────────────────────────────────────────
+// Requires Ollama running on http://localhost:11434
+// Pull models first:  ollama pull llama3.2   &&   ollama pull nomic-embed-text
+//
+// OllamaSharp 5.x: OllamaApiClient directly implements IChatClient & IEmbeddingGenerator
+var ollamaUri = new Uri(builder.Configuration["Ollama:BaseUrl"] ?? "http://localhost:11434");
+var ollamaChatModel  = builder.Configuration["Ollama:ChatModel"]      ?? "llama3.2";
+var ollamaEmbedModel = builder.Configuration["Ollama:EmbeddingModel"] ?? "nomic-embed-text";
+
+// IChatClient → real local Llama model
+builder.Services.AddSingleton<IChatClient>(
+    new OllamaApiClient(ollamaUri, ollamaChatModel));
+
+// Register Vector Math & Embeddings Services (Phase 3)
+builder.Services.AddSingleton<VectorMathService>();
+
+// IEmbeddingGenerator → real local nomic-embed-text model (768 dimensions)
+builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(
+    new OllamaApiClient(ollamaUri, ollamaEmbedModel));
+
+// ─── Swap to mock clients if Ollama is not running ───────────────────────────
+// builder.Services.AddSingleton<IChatClient, DevMockChatClient>();
+// builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>, DevMockEmbeddingGenerator>();
 
 // Configure In-Memory Database
 builder.Services.AddDbContext<AppDbContext>(options =>

@@ -8,7 +8,6 @@ using TaskFlow.Api.Models;
 
 namespace TaskFlow.Api.Endpoints;
 
-// Strongly-typed DTO for Structured AI Output
 public record SubtaskAnalysisResponse(
     int WorkItemId,
     string OriginalTitle,
@@ -16,6 +15,8 @@ public record SubtaskAnalysisResponse(
     int EstimatedTotalHours,
     string ComplexityLevel // "Low" | "Medium" | "High"
 );
+
+public record CompareSemanticSimilarityRequest(string Text1, string Text2);
 
 public static class AiEndpoints
 {
@@ -75,7 +76,6 @@ public static class AiEndpoints
                 Priority: {item.Priority}
                 """;
 
-            // Instruct LLM to format response strictly as JSON matching SubtaskAnalysisResponse schema
             var options = new ChatOptions
             {
                 ResponseFormat = ChatResponseFormat.ForJsonSchema<SubtaskAnalysisResponse>()
@@ -83,7 +83,6 @@ public static class AiEndpoints
 
             var response = await chatClient.GetResponseAsync(prompt, options, ct);
 
-            // Deserialize strongly-typed C# record directly from JSON output
             try
             {
                 var structuredResult = JsonSerializer.Deserialize<SubtaskAnalysisResponse>(
@@ -94,7 +93,6 @@ public static class AiEndpoints
             }
             catch (JsonException)
             {
-                // Fallback structured record if parsing raw string
                 return Results.Ok(new SubtaskAnalysisResponse(
                     item.Id,
                     item.Title,
@@ -112,7 +110,6 @@ public static class AiEndpoints
             [FromServices] IChatClient chatClient,
             CancellationToken ct) =>
         {
-            // Define C# function as an AI Tool using AIFunctionFactory
             [Description("Gets the list of work items filtered by priority (1=High, 2=Medium, 3=Low)")]
             async Task<List<string>> GetWorkItemsByPriority(int priority)
             {
@@ -137,6 +134,39 @@ public static class AiEndpoints
                 Prompt = request.UserPrompt,
                 ToolRegistered = priorityTool.Name,
                 Response = response.Text
+            });
+        });
+
+        // 4. Semantic Similarity Search Endpoint (Phase 3 - Lesson 1)
+        group.MapPost("/semantic-similarity", async (
+            [FromBody] CompareSemanticSimilarityRequest request,
+            [FromServices] IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
+            [FromServices] VectorMathService vectorMath,
+            CancellationToken ct) =>
+        {
+            // Generate 128-dimensional embedding vectors for both input texts
+            var embeddings = await embeddingGenerator.GenerateAsync([request.Text1, request.Text2], cancellationToken: ct);
+
+            var vector1 = embeddings[0].Vector.Span;
+            var vector2 = embeddings[1].Vector.Span;
+
+            // Compute Cosine Similarity using SIMD TensorPrimitives in .NET 10
+            float similarityScore = vectorMath.CalculateCosineSimilarity(vector1, vector2);
+
+            string interpretation = similarityScore switch
+            {
+                >= 0.85f => "High Semantic Match (Identical domain concepts)",
+                >= 0.50f => "Moderate Semantic Match (Related technical topic)",
+                _ => "Low Semantic Match (Distinct concepts)"
+            };
+
+            return Results.Ok(new
+            {
+                Text1 = request.Text1,
+                Text2 = request.Text2,
+                CosineSimilarityScore = Math.Round(similarityScore, 4),
+                Interpretation = interpretation,
+                VectorDimensions = vector1.Length
             });
         });
 

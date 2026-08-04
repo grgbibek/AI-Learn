@@ -119,6 +119,23 @@
           }
         }
       },
+      "OllamaSharp/5.4.30": {
+        "type": "package",
+        "dependencies": {
+          "Microsoft.Extensions.AI": "10.8.0",
+          "Microsoft.Extensions.AI.Abstractions": "10.8.0"
+        },
+        "compile": {
+          "lib/net10.0/OllamaSharp.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net10.0/OllamaSharp.dll": {
+            "related": ".xml"
+          }
+        }
+      },
       "System.Numerics.Tensors/10.0.10": {
         "type": "package",
         "compile": {
@@ -280,6 +297,31 @@
         "microsoft.openapi.nuspec"
       ]
     },
+    "OllamaSharp/5.4.30": {
+      "sha512": "r/dtO3cm/D+OCB1A3dPcA//YnC9Cak3SSSK1dxfvG9RbEKjMezf3l04Ag1j8tiDul/oGn9nb8+fIwlrg0KOkww==",
+      "type": "package",
+      "path": "ollamasharp/5.4.30",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "LICENSE",
+        "Ollama.png",
+        "README.md",
+        "analyzers/dotnet/cs/OllamaSharp.SourceGenerators.dll",
+        "lib/net10.0/OllamaSharp.dll",
+        "lib/net10.0/OllamaSharp.xml",
+        "lib/net8.0/OllamaSharp.dll",
+        "lib/net8.0/OllamaSharp.xml",
+        "lib/net9.0/OllamaSharp.dll",
+        "lib/net9.0/OllamaSharp.xml",
+        "lib/netstandard2.0/OllamaSharp.dll",
+        "lib/netstandard2.0/OllamaSharp.xml",
+        "lib/netstandard2.1/OllamaSharp.dll",
+        "lib/netstandard2.1/OllamaSharp.xml",
+        "ollamasharp.5.4.30.nupkg.sha512",
+        "ollamasharp.nuspec"
+      ]
+    },
     "System.Numerics.Tensors/10.0.10": {
       "sha512": "9Ildb4Y9maDztB0ZRGxsNShbpCQ2Tjv2dr4IjskBxpTGhH7aIz1+oC+Hl833ASs/htWwsH6myNe+sRpeyCzeMQ==",
       "type": "package",
@@ -314,7 +356,8 @@
     "net10.0": [
       "Microsoft.AspNetCore.OpenApi >= 10.0.3",
       "Microsoft.EntityFrameworkCore.InMemory >= 10.0.10",
-      "Microsoft.Extensions.AI >= 10.8.3"
+      "Microsoft.Extensions.AI >= 10.8.3",
+      "OllamaSharp >= 5.4.30"
     ]
   },
   "packageFolders": {
@@ -379,6 +422,10 @@
           "Microsoft.Extensions.AI": {
             "target": "Package",
             "version": "[10.8.3, )"
+          },
+          "OllamaSharp": {
+            "target": "Package",
+            "version": "[5.4.30, )"
           }
         },
         "imports": [

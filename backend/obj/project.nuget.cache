@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "InJx8kqAYXc=",
+  "dgSpecHash": "3RogqdpKfWE=",
   "success": true,
   "projectFilePath": "D:\\Projects\\vibe\\rigo\\backend\\backend.csproj",
   "expectedPackageFiles": [
@@ -12,6 +12,7 @@
     "C:\\Users\\grgbi\\.nuget\\packages\\microsoft.extensions.ai\\10.8.3\\microsoft.extensions.ai.10.8.3.nupkg.sha512",
     "C:\\Users\\grgbi\\.nuget\\packages\\microsoft.extensions.ai.abstractions\\10.8.3\\microsoft.extensions.ai.abstractions.10.8.3.nupkg.sha512",
     "C:\\Users\\grgbi\\.nuget\\packages\\microsoft.openapi\\2.0.0\\microsoft.openapi.2.0.0.nupkg.sha512",
+    "C:\\Users\\grgbi\\.nuget\\packages\\ollamasharp\\5.4.30\\ollamasharp.5.4.30.nupkg.sha512",
     "C:\\Users\\grgbi\\.nuget\\packages\\system.numerics.tensors\\10.0.10\\system.numerics.tensors.10.0.10.nupkg.sha512"
   ],
   "logs": [
