@@ -16,6 +16,14 @@ public record SubtaskAnalysisResponse(
     string ComplexityLevel // "Low" | "Medium" | "High"
 );
 
+// Shape requested from the LLM. WorkItemId/OriginalTitle are deliberately excluded -
+// we already know them, so we never let the model guess/hallucinate them.
+public record AiSubtaskAnalysis(
+    [property: Description("Exactly 3 concrete, actionable subtasks")] List<string> Subtasks,
+    int EstimatedTotalHours,
+    [property: Description("Must be exactly one of: Low, Medium, High")] string ComplexityLevel
+);
+
 public record CompareSemanticSimilarityRequest(string Text1, string Text2);
 
 public static class AiEndpoints
@@ -70,7 +78,7 @@ public static class AiEndpoints
             }
 
             var prompt = $"""
-                Analyze the following work item and return a structured analysis:
+                Analyze the following work item and break it down into exactly 3 actionable subtasks:
                 Title: {item.Title}
                 Description: {item.Description}
                 Priority: {item.Priority}
@@ -78,18 +86,30 @@ public static class AiEndpoints
 
             var options = new ChatOptions
             {
-                ResponseFormat = ChatResponseFormat.ForJsonSchema<SubtaskAnalysisResponse>()
+                ResponseFormat = ChatResponseFormat.ForJsonSchema<AiSubtaskAnalysis>()
             };
 
             var response = await chatClient.GetResponseAsync(prompt, options, ct);
 
             try
             {
-                var structuredResult = JsonSerializer.Deserialize<SubtaskAnalysisResponse>(
+                var aiResult = JsonSerializer.Deserialize<AiSubtaskAnalysis>(
                     response.Text, 
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                return Results.Ok(structuredResult);
+                if (aiResult is null)
+                {
+                    throw new JsonException("Deserialized result was null.");
+                }
+
+                // WorkItemId/OriginalTitle always come from the DB, never from the model.
+                return Results.Ok(new SubtaskAnalysisResponse(
+                    item.Id,
+                    item.Title,
+                    aiResult.Subtasks,
+                    aiResult.EstimatedTotalHours,
+                    aiResult.ComplexityLevel
+                ));
             }
             catch (JsonException)
             {
