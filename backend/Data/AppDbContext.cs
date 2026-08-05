@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using System.Text.Json;
 using TaskFlow.Api.Models;
 
 namespace TaskFlow.Api.Data;
@@ -6,10 +8,24 @@ namespace TaskFlow.Api.Data;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<WorkItem> WorkItems => Set<WorkItem>();
+    public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // Persist the embedding as JSON text rather than SQL Server's native `vector` column type,
+        // since EF Core doesn't yet translate VECTOR_DISTANCE via LINQ - similarity search stays in VectorMathService for now.
+        modelBuilder.Entity<DocumentChunk>()
+            .Property(c => c.Embedding)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<float[]>(v, (JsonSerializerOptions?)null) ?? Array.Empty<float>(),
+                new ValueComparer<float[]>(
+                    (a, b) => (a ?? Array.Empty<float>()).SequenceEqual(b ?? Array.Empty<float>()),
+                    v => v.Aggregate(0, (hash, f) => HashCode.Combine(hash, f)),
+                    v => v.ToArray()))
+            .HasColumnType("nvarchar(max)");
 
         modelBuilder.Entity<WorkItem>().HasData(
             new WorkItem
@@ -19,8 +35,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 Description = "Verify development environment, install packages, and configure CORS policy.",
                 Priority = WorkItemPriority.High,
                 Status = WorkItemStatus.Done,
-                CreatedAt = DateTime.UtcNow.AddDays(-2),
-                DueDate = DateTime.UtcNow.AddDays(-1)
+                CreatedAt = new DateTime(2026, 8, 3, 0, 0, 0, DateTimeKind.Utc),
+                DueDate = new DateTime(2026, 8, 4, 0, 0, 0, DateTimeKind.Utc)
             },
             new WorkItem
             {
@@ -29,8 +45,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 Description = "Refactor components to use signal(), computed(), and httpResource pattern.",
                 Priority = WorkItemPriority.Critical,
                 Status = WorkItemStatus.InProgress,
-                CreatedAt = DateTime.UtcNow.AddDays(-1),
-                DueDate = DateTime.UtcNow.AddDays(2)
+                CreatedAt = new DateTime(2026, 8, 4, 0, 0, 0, DateTimeKind.Utc),
+                DueDate = new DateTime(2026, 8, 7, 0, 0, 0, DateTimeKind.Utc)
             },
             new WorkItem
             {
@@ -39,9 +55,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 Description = "Integrate structured logging into Minimal APIs for production observability.",
                 Priority = WorkItemPriority.Medium,
                 Status = WorkItemStatus.Todo,
-                CreatedAt = DateTime.UtcNow,
-                DueDate = DateTime.UtcNow.AddDays(5)
+                CreatedAt = new DateTime(2026, 8, 5, 0, 0, 0, DateTimeKind.Utc),
+                DueDate = new DateTime(2026, 8, 10, 0, 0, 0, DateTimeKind.Utc)
             }
         );
     }
 }
+

@@ -1,0 +1,16 @@
+# .NET
+backend/bin/
+backend/obj/
+*.user
+
+# Node / Angular (frontend also has its own .gitignore)
+node_modules/
+frontend/dist/
+frontend/.angular/
+
+# IDE
+.vs/
+
+# OS
+.DS_Store
+Thumbs.db

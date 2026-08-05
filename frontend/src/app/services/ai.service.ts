@@ -3,7 +3,9 @@ import { HttpClient } from '@angular/common/http';
 import {
   SubtaskAnalysisResponse,
   WorkloadAssistantResponse,
-  SemanticSimilarityResponse
+  SemanticSimilarityResponse,
+  IngestDocumentResponse,
+  AskKnowledgeBaseResponse
 } from '../models/ai.model';
 
 @Injectable({
@@ -66,5 +68,52 @@ export class AiService {
 
   compareSemanticSimilarity(text1: string, text2: string) {
     return this.http.post<SemanticSimilarityResponse>(`${this.apiUrl}/semantic-similarity`, { text1, text2 });
+  }
+
+  // RAG Knowledge Base (Phase 3, Lesson 2): ingest documents, then ask grounded questions.
+  readonly ragUrl = 'http://localhost:5198/api/rag';
+
+  readonly ingestLoading = signal<boolean>(false);
+  readonly ingestResult = signal<IngestDocumentResponse | null>(null);
+  readonly ingestError = signal<string | null>(null);
+
+  readonly askLoading = signal<boolean>(false);
+  readonly askResult = signal<AskKnowledgeBaseResponse | null>(null);
+  readonly askError = signal<string | null>(null);
+
+  ingestDocument(title: string, content: string): void {
+    this.ingestLoading.set(true);
+    this.ingestError.set(null);
+    this.ingestResult.set(null);
+
+    this.http.post<IngestDocumentResponse>(`${this.ragUrl}/ingest`, { title, content }).subscribe({
+      next: (result) => {
+        this.ingestResult.set(result);
+        this.ingestLoading.set(false);
+      },
+      error: (err: unknown) => {
+        console.error('Failed to ingest document', err);
+        this.ingestError.set('Ingest failed. Is the backend/Ollama running?');
+        this.ingestLoading.set(false);
+      }
+    });
+  }
+
+  askKnowledgeBase(question: string, topK = 3): void {
+    this.askLoading.set(true);
+    this.askError.set(null);
+    this.askResult.set(null);
+
+    this.http.post<AskKnowledgeBaseResponse>(`${this.ragUrl}/ask`, { question, topK }).subscribe({
+      next: (result) => {
+        this.askResult.set(result);
+        this.askLoading.set(false);
+      },
+      error: (err: unknown) => {
+        console.error('Failed to query knowledge base', err);
+        this.askError.set('Ask failed. Ingest a document first, and make sure the backend/Ollama is running.');
+        this.askLoading.set(false);
+      }
+    });
   }
 }

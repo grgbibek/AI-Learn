@@ -1,0 +1,87 @@
+<section class="rag-panel">
+  <header class="rag-header">
+    <span class="rag-icon">📚</span>
+    <div>
+      <h3>RAG Knowledge Base</h3>
+      <p>Ingest a document, then ask questions grounded strictly in what you've ingested.</p>
+    </div>
+  </header>
+
+  <div class="rag-grid">
+    <!-- Ingest -->
+    <div class="rag-card">
+      <h4>1. Ingest a Document</h4>
+      <input
+        type="text"
+        placeholder="Document title, e.g. AGENTS.md"
+        [ngModel]="docTitle()"
+        (ngModelChange)="docTitle.set($event)"
+        class="rag-input"
+      />
+      <textarea
+        placeholder="Paste document content here..."
+        [ngModel]="docContent()"
+        (ngModelChange)="docContent.set($event)"
+        class="rag-textarea"
+        rows="6"
+      ></textarea>
+      <button (click)="onIngest()" [disabled]="ai.ingestLoading()" class="btn-action btn-ai">
+        @if (ai.ingestLoading()) {
+          Chunking &amp; embedding…
+        } @else {
+          ✨ Ingest Document
+        }
+      </button>
+
+      @if (ai.ingestError(); as err) {
+        <p class="rag-error">{{ err }}</p>
+      }
+      @if (ai.ingestResult(); as result) {
+        <p class="rag-success">
+          ✅ Ingested "{{ result.title }}" as {{ result.chunksCreated }} chunk(s).
+        </p>
+      }
+    </div>
+
+    <!-- Ask -->
+    <div class="rag-card">
+      <h4>2. Ask a Grounded Question</h4>
+      <input
+        type="text"
+        placeholder="Ask something about the ingested document(s)..."
+        [ngModel]="question()"
+        (ngModelChange)="question.set($event)"
+        (keyup.enter)="onAsk()"
+        class="rag-input"
+      />
+      <button (click)="onAsk()" [disabled]="ai.askLoading()" class="btn-action btn-ai">
+        @if (ai.askLoading()) {
+          Retrieving &amp; thinking…
+        } @else {
+          🔍 Ask
+        }
+      </button>
+
+      @if (ai.askError(); as err) {
+        <p class="rag-error">{{ err }}</p>
+      }
+      @if (ai.askResult(); as result) {
+        <div class="rag-answer">
+          <strong>Answer:</strong>
+          <p>{{ result.answer }}</p>
+          <div class="rag-sources">
+            <strong>Sources:</strong>
+            <ul>
+              @for (source of result.sources; track source.chunkIndex + source.sourceTitle) {
+                <li>
+                  {{ source.sourceTitle }} (chunk #{{ source.chunkIndex }}) —
+                  similarity {{ source.similarityScore }}
+                </li>
+              }
+            </ul>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</section>

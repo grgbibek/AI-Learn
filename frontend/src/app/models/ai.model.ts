@@ -19,3 +19,21 @@ export interface SemanticSimilarityResponse {
   interpretation: string;
   vectorDimensions: number;
 }
+
+export interface IngestDocumentResponse {
+  title: string;
+  chunksCreated: number;
+}
+
+export interface KnowledgeSource {
+  sourceTitle: string;
+  chunkIndex: number;
+  similarityScore: number;
+}
+
+export interface AskKnowledgeBaseResponse {
+  question: string;
+  answer: string;
+  sources: KnowledgeSource[];
+}
+

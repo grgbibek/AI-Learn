@@ -1,0 +1,131 @@
+.rag-panel {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.rag-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.rag-icon {
+  font-size: 1.5rem;
+}
+
+.rag-header h3 {
+  margin: 0 0 0.25rem 0;
+  color: #f8fafc;
+}
+
+.rag-header p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.875rem;
+}
+
+.rag-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 900px) {
+  .rag-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rag-card {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.rag-card h4 {
+  margin: 0 0 0.25rem 0;
+  color: #e2e8f0;
+  font-size: 0.95rem;
+}
+
+.rag-input,
+.rag-textarea {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #f8fafc;
+  padding: 0.5rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  resize: vertical;
+}
+
+.rag-input:focus,
+.rag-textarea:focus {
+  outline: none;
+  border-color: #8b5cf6;
+}
+
+.btn-action.btn-ai {
+  background: linear-gradient(90deg, #8b5cf6, #ec4899);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.55rem 1rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.btn-action.btn-ai:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.btn-action.btn-ai:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.rag-error {
+  color: #f87171;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.rag-success {
+  color: #4ade80;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.rag-answer {
+  background: #1e293b;
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  color: #e2e8f0;
+}
+
+.rag-answer p {
+  margin: 0.35rem 0 0.75rem 0;
+  line-height: 1.5;
+}
+
+.rag-sources ul {
+  margin: 0.35rem 0 0 0;
+  padding-left: 1.1rem;
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.rag-sources li {
+  margin-bottom: 0.25rem;
+}

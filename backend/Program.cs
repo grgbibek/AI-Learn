@@ -30,6 +30,7 @@ builder.Services.AddSingleton<IChatClient>(
 
 // Register Vector Math & Embeddings Services (Phase 3)
 builder.Services.AddSingleton<VectorMathService>();
+builder.Services.AddSingleton<TextChunkingService>();
 
 // IEmbeddingGenerator → real local nomic-embed-text model (768 dimensions)
 builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(
@@ -39,9 +40,9 @@ builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(
 // builder.Services.AddSingleton<IChatClient, DevMockChatClient>();
 // builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>, DevMockEmbeddingGenerator>();
 
-// Configure In-Memory Database
+// Configure SQL Server Database (SQL Server 2025 LocalDB)
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseInMemoryDatabase("TaskFlowDb"));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Configure CORS for Angular App (default http://localhost:4200)
 builder.Services.AddCors(options =>
@@ -56,11 +57,11 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Seed In-Memory Database
+// Apply pending EF Core Migrations (creates the database on first run)
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated();
+    db.Database.Migrate();
 }
 
 // Configure HTTP pipeline
@@ -74,5 +75,6 @@ app.UseCors("AllowAngularDev");
 // Map endpoints
 app.MapWorkItemEndpoints();
 app.MapAiEndpoints();
+app.MapRagEndpoints();
 
 app.Run();
