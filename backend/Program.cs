@@ -31,6 +31,7 @@ builder.Services.AddSingleton<IChatClient>(
 // Register Vector Math & Embeddings Services (Phase 3)
 builder.Services.AddSingleton<VectorMathService>();
 builder.Services.AddSingleton<TextChunkingService>();
+builder.Services.AddSingleton<HybridSearchService>();
 
 // IEmbeddingGenerator → real local nomic-embed-text model (768 dimensions)
 builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(

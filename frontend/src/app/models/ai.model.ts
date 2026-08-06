@@ -28,12 +28,16 @@ export interface IngestDocumentResponse {
 export interface KnowledgeSource {
   sourceTitle: string;
   chunkIndex: number;
-  similarityScore: number;
+  vectorScore: number;
+  keywordScore: number;
+  fusedScore: number;
+  rerankPosition: number;
 }
 
 export interface AskKnowledgeBaseResponse {
   question: string;
   answer: string;
+  rerankMethod: string;
   sources: KnowledgeSource[];
 }
 

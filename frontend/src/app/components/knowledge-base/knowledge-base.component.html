@@ -70,15 +70,31 @@
           <strong>Answer:</strong>
           <p>{{ result.answer }}</p>
           <div class="rag-sources">
-            <strong>Sources:</strong>
-            <ul>
-              @for (source of result.sources; track source.chunkIndex + source.sourceTitle) {
-                <li>
-                  {{ source.sourceTitle }} (chunk #{{ source.chunkIndex }}) —
-                  similarity {{ source.similarityScore }}
-                </li>
-              }
-            </ul>
+            <strong>Sources</strong> <span class="rag-rerank-badge">rerank: {{ result.rerankMethod }}</span>
+            <table class="rag-sources-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Source</th>
+                  <th>Chunk</th>
+                  <th>Vector</th>
+                  <th>Keyword (BM25)</th>
+                  <th>Fused (RRF)</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (source of result.sources; track source.chunkIndex + source.sourceTitle) {
+                  <tr>
+                    <td>{{ source.rerankPosition }}</td>
+                    <td>{{ source.sourceTitle }}</td>
+                    <td>{{ source.chunkIndex }}</td>
+                    <td>{{ source.vectorScore }}</td>
+                    <td>{{ source.keywordScore }}</td>
+                    <td>{{ source.fusedScore }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
           </div>
         </div>
       }

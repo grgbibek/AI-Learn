@@ -99,21 +99,75 @@ export class AiService {
     });
   }
 
+  // Streams the answer token-by-token over Server-Sent Events instead of waiting for the full response.
   askKnowledgeBase(question: string, topK = 3): void {
     this.askLoading.set(true);
     this.askError.set(null);
-    this.askResult.set(null);
+    this.askResult.set({ question, answer: '', rerankMethod: '', sources: [] });
 
-    this.http.post<AskKnowledgeBaseResponse>(`${this.ragUrl}/ask`, { question, topK }).subscribe({
-      next: (result) => {
-        this.askResult.set(result);
-        this.askLoading.set(false);
-      },
-      error: (err: unknown) => {
-        console.error('Failed to query knowledge base', err);
-        this.askError.set('Ask failed. Ingest a document first, and make sure the backend/Ollama is running.');
-        this.askLoading.set(false);
-      }
+    this.streamAsk(question, topK).catch((err: unknown) => {
+      console.error('Failed to query knowledge base', err);
+      this.askError.set('Ask failed. Ingest a document first, and make sure the backend/Ollama is running.');
+      this.askLoading.set(false);
     });
+  }
+
+  private async streamAsk(question: string, topK: number): Promise<void> {
+    const response = await fetch(`${this.ragUrl}/ask-stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, topK })
+    });
+
+    if (!response.ok || !response.body) {
+      throw new Error(`Request failed with status ${response.status}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // SSE frames are separated by a blank line; the last split piece may be incomplete, so hold it back.
+      const frames = buffer.split('\n\n');
+      buffer = frames.pop() ?? '';
+
+      for (const frame of frames) {
+        this.handleSseFrame(frame);
+      }
+    }
+
+    this.askLoading.set(false);
+  }
+
+  private handleSseFrame(frame: string): void {
+    let eventName = 'message';
+    let data = '';
+
+    for (const line of frame.split('\n')) {
+      if (line.startsWith('event:')) eventName = line.slice(6).trim();
+      else if (line.startsWith('data:')) data += line.slice(5).trim();
+    }
+    if (!data) return;
+
+    const payload = JSON.parse(data);
+
+    if (eventName === 'sources') {
+      this.askResult.update(current => current && {
+        ...current,
+        rerankMethod: payload.rerankMethod,
+        sources: payload.sources
+      });
+    } else if (eventName === 'token') {
+      this.askResult.update(current => current && {
+        ...current,
+        answer: current.answer + payload.text
+      });
+    }
   }
 }
