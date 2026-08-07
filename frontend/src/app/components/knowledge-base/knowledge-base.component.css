@@ -94,6 +94,27 @@
   cursor: not-allowed;
 }
 
+.rag-ask-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-action.btn-stop {
+  background: #334155;
+  color: #f8fafc;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  padding: 0.55rem 1rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.btn-action.btn-stop:hover {
+  background: #475569;
+}
+
 .rag-error {
   color: #f87171;
   font-size: 0.85rem;

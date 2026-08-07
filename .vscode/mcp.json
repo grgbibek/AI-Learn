@@ -1,0 +1,13 @@
+{
+  "servers": {
+    "taskflow-workitems": {
+      "type": "stdio",
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "${workspaceFolder}/mcp-server/mcp-server.csproj"
+      ]
+    }
+  }
+}

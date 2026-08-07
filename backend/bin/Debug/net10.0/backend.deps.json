@@ -12,7 +12,8 @@
           "Microsoft.EntityFrameworkCore.Design": "10.0.10",
           "Microsoft.EntityFrameworkCore.SqlServer": "10.0.10",
           "Microsoft.Extensions.AI": "10.8.3",
-          "OllamaSharp": "5.4.30"
+          "OllamaSharp": "5.4.30",
+          "Scalar.AspNetCore": "2.16.17"
         },
         "runtime": {
           "backend.dll": {}
@@ -682,6 +683,14 @@
           }
         }
       },
+      "Scalar.AspNetCore/2.16.17": {
+        "runtime": {
+          "lib/net10.0/Scalar.AspNetCore.dll": {
+            "assemblyVersion": "2.16.17.0",
+            "fileVersion": "2.16.17.0"
+          }
+        }
+      },
       "System.ClientModel/1.5.1": {
         "dependencies": {
           "System.Memory.Data": "8.0.1"
@@ -1067,6 +1076,13 @@
       "sha512": "sha512-r/dtO3cm/D+OCB1A3dPcA//YnC9Cak3SSSK1dxfvG9RbEKjMezf3l04Ag1j8tiDul/oGn9nb8+fIwlrg0KOkww==",
       "path": "ollamasharp/5.4.30",
       "hashPath": "ollamasharp.5.4.30.nupkg.sha512"
+    },
+    "Scalar.AspNetCore/2.16.17": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-J5FyUxdZE/QbS/s3NSE6XWoBIJwta1eOUBuDbieHm2HSfFELH8hOnxSsoEBreckoekfZ7STsMCMGmmUNPVVosg==",
+      "path": "scalar.aspnetcore/2.16.17",
+      "hashPath": "scalar.aspnetcore.2.16.17.nupkg.sha512"
     },
     "System.ClientModel/1.5.1": {
       "type": "package",

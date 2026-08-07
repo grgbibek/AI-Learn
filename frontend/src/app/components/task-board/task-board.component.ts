@@ -1,8 +1,11 @@
 import { Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { debounceTime, distinctUntilChanged, switchMap, from, of, catchError } from 'rxjs';
 import { WorkItemService } from '../../services/work-item.service';
 import { AiService } from '../../services/ai.service';
+import { ClientAiService, ToneResult } from '../../services/client-ai.service';
 import { WorkItem, WorkItemPriority, WorkItemStatus } from '../../models/work-item.model';
 
 @Component({
@@ -15,6 +18,7 @@ import { WorkItem, WorkItemPriority, WorkItemStatus } from '../../models/work-it
 export class TaskBoardComponent {
   readonly service = inject(WorkItemService);
   readonly ai = inject(AiService);
+  readonly clientAi = inject(ClientAiService);
   private fb = inject(FormBuilder);
 
   // Enums for Template Access
@@ -28,6 +32,9 @@ export class TaskBoardComponent {
 
   assistantPrompt = signal<string>('');
 
+  // Live client-side sentiment tone of the description being typed - runs entirely in-browser.
+  descriptionTone = signal<ToneResult | null>(null);
+
   // Strongly-typed reactive form
   itemForm = this.fb.group({
     title: ['', [Validators.required, Validators.minLength(3)]],
@@ -35,6 +42,22 @@ export class TaskBoardComponent {
     priority: [WorkItemPriority.Medium, [Validators.required]],
     dueDate: ['']
   });
+
+  constructor() {
+    this.itemForm.get('description')!.valueChanges.pipe(
+      debounceTime(500),
+      distinctUntilChanged(),
+      switchMap((text) => {
+        const trimmed = (text ?? '').trim();
+        if (trimmed.length < 8) {
+          this.descriptionTone.set(null);
+          return of(null);
+        }
+        return from(this.clientAi.classifyTone(trimmed)).pipe(catchError(() => of(null)));
+      }),
+      takeUntilDestroyed()
+    ).subscribe((result) => this.descriptionTone.set(result));
+  }
 
   toggleForm(): void {
     this.showForm.update(val => !val);
@@ -52,6 +75,7 @@ export class TaskBoardComponent {
     });
 
     this.itemForm.reset({ priority: WorkItemPriority.Medium });
+    this.descriptionTone.set(null);
     this.showForm.set(false);
   }
 

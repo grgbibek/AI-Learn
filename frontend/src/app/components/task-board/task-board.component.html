@@ -107,6 +107,16 @@
           <div class="form-group">
             <label>Description</label>
             <textarea formControlName="description" rows="3" placeholder="Provide context or acceptance criteria..." class="form-input"></textarea>
+            @if (clientAi.modelLoading()) {
+              <span class="tone-badge tone-loading">⏳ Loading in-browser AI model…</span>
+            } @else {
+              @if (descriptionTone(); as tone) {
+                <span class="tone-badge" [class.tone-negative]="tone.label === 'NEGATIVE'" [class.tone-positive]="tone.label === 'POSITIVE'">
+                  {{ tone.label === 'NEGATIVE' ? '⚠️ Sounds urgent/negative' : '🙂 Sounds neutral/positive' }}
+                  ({{ (tone.score * 100).toFixed(0) }}%)
+                </span>
+              }
+            }
           </div>
 
           <div class="form-row">

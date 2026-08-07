@@ -1,6 +1,8 @@
 # .NET
 backend/bin/
 backend/obj/
+mcp-server/bin/
+mcp-server/obj/
 *.user
 
 # Node / Angular (frontend also has its own .gitignore)

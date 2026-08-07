@@ -32,4 +32,8 @@ export class KnowledgeBaseComponent {
     }
     this.ai.askKnowledgeBase(question);
   }
+
+  onStopAsk(): void {
+    this.ai.stopAsk();
+  }
 }

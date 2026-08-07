@@ -9,6 +9,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 {
     public DbSet<WorkItem> WorkItems => Set<WorkItem>();
     public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
+    public DbSet<AgentAuditLog> AgentAuditLogs => Set<AgentAuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

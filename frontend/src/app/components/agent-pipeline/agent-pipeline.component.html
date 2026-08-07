@@ -1,0 +1,89 @@
+<section class="agent-panel">
+  <header class="agent-header">
+    <span class="agent-icon">🤖</span>
+    <div>
+      <h3>Multi-Agent Orchestration</h3>
+      <p>Planner → Developer → Reviewer pipeline, with a revision loop and audit trail.</p>
+    </div>
+  </header>
+
+  <div class="agent-card">
+    <input
+      type="text"
+      placeholder="Feature request, e.g. Add a dark mode toggle to the TaskFlow app"
+      [ngModel]="featureRequest()"
+      (ngModelChange)="featureRequest.set($event)"
+      (keyup.enter)="onPlan()"
+      class="agent-input"
+    />
+    <div class="agent-actions">
+      <button (click)="onPlan()" [disabled]="agents.planLoading()" class="btn-action btn-agent">
+        @if (agents.planLoading()) {
+          Planning &amp; reviewing…
+        } @else {
+          🧩 Plan Feature
+        }
+      </button>
+      <button (click)="onToggleAuditLog()" class="btn-action btn-agent-secondary">
+        @if (showAuditLog()) {
+          Hide Audit Log
+        } @else {
+          📜 Show Audit Log
+        }
+      </button>
+    </div>
+
+    @if (agents.planError(); as err) {
+      <p class="agent-error">{{ err }}</p>
+    }
+
+    @if (agents.planResult(); as result) {
+      <div class="agent-results">
+        @for (item of result.results; track item.subtask) {
+          <div class="agent-result-card" [class.approved]="item.approved" [class.rejected]="!item.approved">
+            <div class="agent-result-header">
+              <strong>{{ item.subtask }}</strong>
+              <span class="agent-verdict-badge">{{ item.approved ? '✅ Approved' : '❌ Rejected' }}</span>
+            </div>
+            <p class="agent-result-label">Developer approach:</p>
+            <p class="agent-result-text">{{ item.technicalApproach }}</p>
+            <p class="agent-result-label">Reviewer feedback:</p>
+            <p class="agent-result-text">{{ item.feedback }}</p>
+          </div>
+        }
+      </div>
+    }
+
+    @if (showAuditLog()) {
+      <div class="agent-audit-log">
+        <strong>Audit Log</strong>
+        @if (agents.auditLoading()) {
+          <p class="agent-muted">Loading…</p>
+        } @else {
+          <table class="agent-audit-table">
+            <thead>
+              <tr>
+                <th>Feature Request</th>
+                <th>Subtask</th>
+                <th>Attempt</th>
+                <th>Approved</th>
+                <th>When</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (entry of agents.auditLog(); track entry.id) {
+                <tr>
+                  <td>{{ entry.featureRequest }}</td>
+                  <td>{{ entry.subtask }}</td>
+                  <td>{{ entry.attemptNumber }}</td>
+                  <td>{{ entry.approved ? '✅' : '❌' }}</td>
+                  <td>{{ entry.createdAt | date: 'short' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    }
+  </div>
+</section>

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
+using Scalar.AspNetCore;
 using TaskFlow.Api.Data;
 using TaskFlow.Api.Endpoints;
 
@@ -69,6 +70,8 @@ using (var scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference(); // interactive API docs UI at /scalar - reads the OpenAPI doc above
+    app.MapGet("/", () => Results.Redirect("/scalar")); // make the API docs the default landing page
 }
 
 app.UseCors("AllowAngularDev");
@@ -77,5 +80,6 @@ app.UseCors("AllowAngularDev");
 app.MapWorkItemEndpoints();
 app.MapAiEndpoints();
 app.MapRagEndpoints();
+app.MapAgentEndpoints();
 
 app.Run();

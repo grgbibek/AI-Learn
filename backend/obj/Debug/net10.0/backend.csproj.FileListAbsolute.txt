@@ -203,3 +203,4 @@ C:\Users\bibekgurung\Desktop\Rapid\Extras\AI-Learn\backend\bin\Debug\net10.0\run
 C:\Users\bibekgurung\Desktop\Rapid\Extras\AI-Learn\backend\bin\Debug\net10.0\runtimes\win-arm64\native\Microsoft.Data.SqlClient.SNI.dll
 C:\Users\bibekgurung\Desktop\Rapid\Extras\AI-Learn\backend\bin\Debug\net10.0\runtimes\win-x64\native\Microsoft.Data.SqlClient.SNI.dll
 C:\Users\bibekgurung\Desktop\Rapid\Extras\AI-Learn\backend\bin\Debug\net10.0\runtimes\win-x86\native\Microsoft.Data.SqlClient.SNI.dll
+C:\Users\bibekgurung\Desktop\Rapid\Extras\AI-Learn\backend\bin\Debug\net10.0\Scalar.AspNetCore.dll

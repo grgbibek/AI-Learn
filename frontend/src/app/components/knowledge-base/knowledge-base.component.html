@@ -54,13 +54,18 @@
         (keyup.enter)="onAsk()"
         class="rag-input"
       />
-      <button (click)="onAsk()" [disabled]="ai.askLoading()" class="btn-action btn-ai">
+      <div class="rag-ask-actions">
+        <button (click)="onAsk()" [disabled]="ai.askLoading()" class="btn-action btn-ai">
+          @if (ai.askLoading()) {
+            Retrieving &amp; thinking…
+          } @else {
+            🔍 Ask
+          }
+        </button>
         @if (ai.askLoading()) {
-          Retrieving &amp; thinking…
-        } @else {
-          🔍 Ask
+          <button (click)="onStopAsk()" class="btn-action btn-stop">⏹ Stop</button>
         }
-      </button>
+      </div>
 
       @if (ai.askError(); as err) {
         <p class="rag-error">{{ err }}</p>

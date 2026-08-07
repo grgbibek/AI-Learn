@@ -80,6 +80,7 @@ export class AiService {
   readonly askLoading = signal<boolean>(false);
   readonly askResult = signal<AskKnowledgeBaseResponse | null>(null);
   readonly askError = signal<string | null>(null);
+  private askAbortController: AbortController | null = null;
 
   ingestDocument(title: string, content: string): void {
     this.ingestLoading.set(true);
@@ -105,18 +106,32 @@ export class AiService {
     this.askError.set(null);
     this.askResult.set({ question, answer: '', rerankMethod: '', sources: [] });
 
-    this.streamAsk(question, topK).catch((err: unknown) => {
+    this.askAbortController = new AbortController();
+
+    this.streamAsk(question, topK, this.askAbortController.signal).catch((err: unknown) => {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        // User clicked Stop - not a real failure, keep whatever partial answer already streamed in.
+        this.askLoading.set(false);
+        return;
+      }
       console.error('Failed to query knowledge base', err);
       this.askError.set('Ask failed. Ingest a document first, and make sure the backend/Ollama is running.');
       this.askLoading.set(false);
     });
   }
 
-  private async streamAsk(question: string, topK: number): Promise<void> {
+  // Cancels the in-progress stream: aborting the fetch closes the connection, which cancels the
+  // backend's CancellationToken too, stopping both our API and the underlying Ollama generation.
+  stopAsk(): void {
+    this.askAbortController?.abort();
+  }
+
+  private async streamAsk(question: string, topK: number, signal: AbortSignal): Promise<void> {
     const response = await fetch(`${this.ragUrl}/ask-stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, topK })
+      body: JSON.stringify({ question, topK }),
+      signal
     });
 
     if (!response.ok || !response.body) {

@@ -249,6 +249,28 @@
   font-size: 0.9rem;
 }
 
+.tone-badge {
+  align-self: flex-start;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+}
+
+.tone-badge.tone-negative {
+  color: #fca5a5;
+  background: #3f1d1d;
+  border-color: #7f1d1d;
+}
+
+.tone-badge.tone-positive {
+  color: #86efac;
+  background: #14291d;
+  border-color: #166534;
+}
+
 .form-row {
   display: flex;
   gap: 1rem;

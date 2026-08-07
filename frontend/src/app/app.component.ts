@@ -1,11 +1,12 @@
 import { Component } from '@angular/core';
 import { TaskBoardComponent } from './components/task-board/task-board.component';
 import { KnowledgeBaseComponent } from './components/knowledge-base/knowledge-base.component';
+import { AgentPipelineComponent } from './components/agent-pipeline/agent-pipeline.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [TaskBoardComponent, KnowledgeBaseComponent],
+  imports: [TaskBoardComponent, KnowledgeBaseComponent, AgentPipelineComponent],
   template: `
     <div class="app-shell">
       <header class="navbar">
@@ -19,6 +20,7 @@ import { KnowledgeBaseComponent } from './components/knowledge-base/knowledge-ba
       </header>
       <main>
         <app-knowledge-base></app-knowledge-base>
+        <app-agent-pipeline></app-agent-pipeline>
         <app-task-board></app-task-board>
       </main>
     </div>
