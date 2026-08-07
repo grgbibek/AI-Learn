@@ -77,6 +77,18 @@
               "target": "Package",
               "version": "[5.4.30, )"
             },
+            "OpenTelemetry.Exporter.Console": {
+              "target": "Package",
+              "version": "[1.17.0, )"
+            },
+            "OpenTelemetry.Extensions.Hosting": {
+              "target": "Package",
+              "version": "[1.17.0, )"
+            },
+            "OpenTelemetry.Instrumentation.AspNetCore": {
+              "target": "Package",
+              "version": "[1.17.0, )"
+            },
             "Scalar.AspNetCore": {
               "target": "Package",
               "version": "[2.16.17, )"

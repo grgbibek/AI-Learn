@@ -38,6 +38,9 @@ public static class AgentEndpoints
             CancellationToken ct) =>
         {
             var logger = loggerFactory.CreateLogger("AgentEndpoints");
+            using var pipelineActivity = AgentTelemetry.Source.StartActivity("PlanFeaturePipeline");
+            pipelineActivity?.SetTag("feature_request", request.FeatureRequest);
+
             var plan = await RunPlannerAgent(request.FeatureRequest, chatClient, ct);
 
             // Steps 2+3 run sequentially per subtask (not Task.WhenAll) - EF Core's DbContext
@@ -89,8 +92,14 @@ public static class AgentEndpoints
         var attempt = 1;
         while (true)
         {
+            using var attemptActivity = AgentTelemetry.Source.StartActivity("DeveloperReviewAttempt");
+            attemptActivity?.SetTag("subtask", subtask);
+            attemptActivity?.SetTag("attempt", attempt);
+
             developerOutput = await RunDeveloperAgent(subtask, previousFeedback, chatClient, ct);
             reviewerOutput = await RunReviewerAgent(subtask, developerOutput.TechnicalApproach, chatClient, ct);
+
+            attemptActivity?.SetTag("approved", reviewerOutput.Approved);
 
             logger.LogInformation(
                 "Agent pipeline attempt {Attempt}/{MaxAttempts} for subtask '{Subtask}': Approved={Approved}",
@@ -122,6 +131,9 @@ public static class AgentEndpoints
 
     private static async Task<PlannerOutput> RunPlannerAgent(string featureRequest, IChatClient chatClient, CancellationToken ct)
     {
+        using var activity = AgentTelemetry.Source.StartActivity("PlannerAgent");
+        activity?.SetTag("feature_request", featureRequest);
+
         var prompt = $"""
             You are a technical planning agent. Break the following feature request into
             3-5 concrete, independently implementable subtasks. Do not write code or
@@ -135,16 +147,23 @@ public static class AgentEndpoints
 
         try
         {
-            return JsonSerializer.Deserialize<PlannerOutput>(response.Text, AgentJsonOptions) ?? new PlannerOutput([]);
+            var result = JsonSerializer.Deserialize<PlannerOutput>(response.Text, AgentJsonOptions) ?? new PlannerOutput([]);
+            activity?.SetTag("subtask_count", result.Subtasks.Count);
+            return result;
         }
         catch (JsonException)
         {
+            activity?.SetTag("parse_failed", true);
             return new PlannerOutput([]);
         }
     }
 
     private static async Task<DeveloperOutput> RunDeveloperAgent(string subtask, string? previousFeedback, IChatClient chatClient, CancellationToken ct)
     {
+        using var activity = AgentTelemetry.Source.StartActivity("DeveloperAgent");
+        activity?.SetTag("subtask", subtask);
+        activity?.SetTag("is_revision", previousFeedback is not null);
+
         var revisionNote = previousFeedback is null
             ? ""
             : $"\n\nA previous proposal was rejected by review with this feedback - revise your approach to address it:\n{previousFeedback}";
@@ -174,6 +193,9 @@ public static class AgentEndpoints
 
     private static async Task<ReviewerOutput> RunReviewerAgent(string subtask, string technicalApproach, IChatClient chatClient, CancellationToken ct)
     {
+        using var activity = AgentTelemetry.Source.StartActivity("ReviewerAgent");
+        activity?.SetTag("subtask", subtask);
+
         var prompt = $"""
             You are a senior code reviewer agent. Critique the following proposed technical
             approach for a subtask. This project uses .NET 10 Minimal APIs and Angular 19

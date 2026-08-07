@@ -1,6 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
-using System.Text.Json;
 using TaskFlow.Api.Models;
 
 namespace TaskFlow.Api.Data;
@@ -15,18 +13,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         base.OnModelCreating(modelBuilder);
 
-        // Persist the embedding as JSON text rather than SQL Server's native `vector` column type,
-        // since EF Core doesn't yet translate VECTOR_DISTANCE via LINQ - similarity search stays in VectorMathService for now.
+        // SQL Server 2025 native `vector` column (EF Core 10+) - nomic-embed-text produces 768-dim
+        // embeddings. Similarity search runs via EF.Functions.VectorDistance() inside SQL Server
+        // instead of loading every row's embedding into app memory for manual cosine similarity.
         modelBuilder.Entity<DocumentChunk>()
             .Property(c => c.Embedding)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<float[]>(v, (JsonSerializerOptions?)null) ?? Array.Empty<float>(),
-                new ValueComparer<float[]>(
-                    (a, b) => (a ?? Array.Empty<float>()).SequenceEqual(b ?? Array.Empty<float>()),
-                    v => v.Aggregate(0, (hash, f) => HashCode.Combine(hash, f)),
-                    v => v.ToArray()))
-            .HasColumnType("nvarchar(max)");
+            .HasColumnType("vector(768)");
 
         modelBuilder.Entity<WorkItem>().HasData(
             new WorkItem

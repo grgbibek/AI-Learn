@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
+using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
 using TaskFlow.Api.Data;
 using TaskFlow.Api.Endpoints;
@@ -10,6 +11,16 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
+
+// ─── OpenTelemetry Tracing (Phase 5 - Observability) ─────────────────────────
+// Traces every agent-pipeline call as a span (see AgentTelemetry.Source usage in
+// AgentEndpoints.cs) plus ASP.NET Core's own request spans, printed to the console
+// for local dev visibility - swap the console exporter for Jaeger/OTLP in production.
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing
+        .AddSource(AgentTelemetry.SourceName)
+        .AddAspNetCoreInstrumentation()
+        .AddConsoleExporter());
 
 // ─── Ollama Client (Real Local LLM) ──────────────────────────────────────────
 // Requires Ollama running on http://localhost:11434
