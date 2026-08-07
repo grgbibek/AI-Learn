@@ -73,6 +73,14 @@
               "target": "Package",
               "version": "[10.8.3, )"
             },
+            "Microsoft.SemanticKernel": {
+              "target": "Package",
+              "version": "[1.*, )"
+            },
+            "Microsoft.SemanticKernel.Connectors.Ollama": {
+              "target": "Package",
+              "version": "[1.79.0-alpha, )"
+            },
             "OllamaSharp": {
               "target": "Package",
               "version": "[5.4.30, )"
@@ -88,6 +96,10 @@
             "OpenTelemetry.Instrumentation.AspNetCore": {
               "target": "Package",
               "version": "[1.17.0, )"
+            },
+            "Qdrant.Client": {
+              "target": "Package",
+              "version": "[1.19.0, )"
             },
             "Scalar.AspNetCore": {
               "target": "Package",

@@ -3,6 +3,8 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Connectors.Ollama;
 using TaskFlow.Api.Data;
 using TaskFlow.Api.Models;
 
@@ -154,6 +156,63 @@ public static class AiEndpoints
                 Prompt = request.UserPrompt,
                 ToolRegistered = priorityTool.Name,
                 Response = response.Text
+            });
+        });
+
+        // 3b. Same tool-calling task, rebuilt with Semantic Kernel's Kernel + Plugin +
+        // FunctionChoiceBehavior.Auto() instead of a hand-built IChatClient + ChatOptions.Tools.
+        // Direct comparison target for endpoint #3 above (Phase 3 gap: Semantic Kernel).
+        group.MapPost("/workload-assistant-sk", async (
+            [FromBody] WorkloadQueryRequest request,
+            [FromServices] AppDbContext db,
+            [FromServices] IConfiguration config,
+            CancellationToken ct) =>
+        {
+            [Description("Gets the list of work items filtered by priority (1=High, 2=Medium, 3=Low)")]
+            async Task<List<string>> GetWorkItemsByPriority(int priority)
+            {
+                var items = await db.WorkItems
+                    .Where(w => (int)w.Priority == priority)
+                    .Select(w => w.Title)
+                    .ToListAsync(ct);
+                return items;
+            }
+
+            var ollamaUri = new Uri(config["Ollama:BaseUrl"] ?? "http://localhost:11434");
+            var chatModel = config["Ollama:ChatModel"] ?? "llama3.2";
+
+            // Ollama chat completion for SK is still experimental (SKEXP0070) as of SK 1.79.
+            // (Under the hood this connector wraps OllamaSharp as an IChatClient and reuses
+            // Microsoft.Extensions.AI's own FunctionInvokingChatClient to run the tool-call loop.)
+#pragma warning disable SKEXP0070
+            var kernelBuilder = Kernel.CreateBuilder();
+            kernelBuilder.AddOllamaChatCompletion(modelId: chatModel, endpoint: ollamaUri);
+#pragma warning restore SKEXP0070
+
+            var kernel = kernelBuilder.Build();
+
+            // A "Plugin" is SK's reusable grouping of one or more callable functions -
+            // the same native C# method as endpoint #3, just registered SK's way.
+            var priorityFunction = KernelFunctionFactory.CreateFromMethod(
+                GetWorkItemsByPriority, functionName: "GetWorkItemsByPriority");
+            kernel.Plugins.AddFromFunctions("WorkItems", [priorityFunction]);
+
+            var executionSettings = new OllamaPromptExecutionSettings
+            {
+                // Auto = the LLM decides whether/which plugin function(s) to invoke, then SK
+                // executes them and feeds results back in, looping until a final answer -
+                // this is what replaced SK's older Planner classes (now obsolete).
+                FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
+            };
+
+            var result = await kernel.InvokePromptAsync(
+                request.UserPrompt, new KernelArguments(executionSettings), cancellationToken: ct);
+
+            return Results.Ok(new
+            {
+                Prompt = request.UserPrompt,
+                PluginRegistered = "WorkItems.GetWorkItemsByPriority",
+                Response = result.ToString()
             });
         });
 

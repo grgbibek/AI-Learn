@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
 using OpenTelemetry.Trace;
+using Qdrant.Client;
 using Scalar.AspNetCore;
 using TaskFlow.Api.Data;
 using TaskFlow.Api.Endpoints;
@@ -49,6 +50,11 @@ builder.Services.AddSingleton<HybridSearchService>();
 builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(
     new OllamaApiClient(ollamaUri, ollamaEmbedModel));
 
+// Dedicated vector database (Phase 3 gap) - standalone Qdrant binary running locally on
+// its default gRPC port 6334, used only by QdrantRagEndpoints.cs as a side-by-side
+// comparison against SQL Server's native `vector` column.
+builder.Services.AddSingleton(new QdrantClient("localhost"));
+
 // ─── Swap to mock clients if Ollama is not running ───────────────────────────
 // builder.Services.AddSingleton<IChatClient, DevMockChatClient>();
 // builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>, DevMockEmbeddingGenerator>();
@@ -91,6 +97,7 @@ app.UseCors("AllowAngularDev");
 app.MapWorkItemEndpoints();
 app.MapAiEndpoints();
 app.MapRagEndpoints();
+app.MapQdrantRagEndpoints();
 app.MapAgentEndpoints();
 
 app.Run();

@@ -1,0 +1,9 @@
+flowchart LR
+    Q["User Question"] --> E["Embed Question<br/>(nomic-embed-text)"]
+    E --> V["Vector Search<br/>SQL VECTOR_DISTANCE"]
+    Q --> K["Keyword Search<br/>BM25"]
+    V --> RRF["Reciprocal Rank Fusion"]
+    K --> RRF
+    RRF --> LLMR["LLM Re-ranker"]
+    LLMR --> TopK["Final Top-K Chunks"]
+    TopK --> Answer["LLM Answer Generation"]
