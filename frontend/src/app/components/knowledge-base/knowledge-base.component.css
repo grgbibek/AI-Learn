@@ -6,6 +6,26 @@
   margin-bottom: 1.5rem;
 }
 
+.streaming-cursor {
+  display: inline-block;
+  color: #38bdf8;
+  font-weight: bold;
+  animation: blink 0.8s infinite;
+  margin-left: 2px;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.rag-error-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
 .rag-header {
   display: flex;
   align-items: flex-start;

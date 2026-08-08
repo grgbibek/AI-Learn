@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\bibekgurung\\Desktop\\Rapid\\Extras\\AI-Learn\\backend\\backend.csproj": {}
+    "D:\\Projects\\vibe\\rigo\\backend\\backend.csproj": {}
   },
   "projects": {
-    "C:\\Users\\bibekgurung\\Desktop\\Rapid\\Extras\\AI-Learn\\backend\\backend.csproj": {
+    "D:\\Projects\\vibe\\rigo\\backend\\backend.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\bibekgurung\\Desktop\\Rapid\\Extras\\AI-Learn\\backend\\backend.csproj",
+        "projectUniqueName": "D:\\Projects\\vibe\\rigo\\backend\\backend.csproj",
         "projectName": "backend",
-        "projectPath": "C:\\Users\\bibekgurung\\Desktop\\Rapid\\Extras\\AI-Learn\\backend\\backend.csproj",
-        "packagesPath": "C:\\Users\\bibekgurung\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\bibekgurung\\Desktop\\Rapid\\Extras\\AI-Learn\\backend\\obj\\",
+        "projectPath": "D:\\Projects\\vibe\\rigo\\backend\\backend.csproj",
+        "packagesPath": "C:\\Users\\grgbi\\.nuget\\packages\\",
+        "outputPath": "D:\\Projects\\vibe\\rigo\\backend\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\bibekgurung\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\grgbi\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -26,14 +26,11 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "https://api.nuget.org/v3/index.json": {},
-          "https://vw-artifactory01.mediconnect.net/artifactory/api/nuget/RQI_SJ_RetrievalManagement": {},
-          "https://vw-artifactory01.mediconnect.net/artifactory/api/nuget/mcgInternalDependencies": {}
+          "C:\\Program Files\\dotnet\\library-packs": {},
+          "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net10.0": {
-            "framework": "net10.0",
             "targetAlias": "net10.0",
             "projectReferences": {}
           }
@@ -48,11 +45,10 @@
           "auditLevel": "low",
           "auditMode": "all"
         },
-        "SdkAnalysisLevel": "10.0.300"
+        "SdkAnalysisLevel": "10.0.100"
       },
       "frameworks": {
         "net10.0": {
-          "framework": "net10.0",
           "targetAlias": "net10.0",
           "dependencies": {
             "Microsoft.AspNetCore.OpenApi": {
@@ -125,7 +121,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.301/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.103/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.AspNetCore": "(,10.0.32767]",
             "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",

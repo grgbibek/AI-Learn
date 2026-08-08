@@ -68,12 +68,18 @@
       </div>
 
       @if (ai.askError(); as err) {
-        <p class="rag-error">{{ err }}</p>
+        <div class="rag-error-box">
+          <p class="rag-error">{{ err }}</p>
+          <button (click)="onAsk()" class="btn-action btn-ai">🔄 Retry Query</button>
+        </div>
       }
       @if (ai.askResult(); as result) {
         <div class="rag-answer">
           <strong>Answer:</strong>
-          <p>{{ result.answer }}</p>
+          <app-markdown-render [content]="result.answer"></app-markdown-render>
+          @if (ai.askLoading()) {
+            <span class="streaming-cursor">▌</span>
+          }
           <div class="rag-sources">
             <strong>Sources</strong> <span class="rag-rerank-badge">rerank: {{ result.rerankMethod }}</span>
             <table class="rag-sources-table">

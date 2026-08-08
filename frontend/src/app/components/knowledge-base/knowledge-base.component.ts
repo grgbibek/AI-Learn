@@ -2,10 +2,12 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AiService } from '../../services/ai.service';
 
+import { MarkdownRenderComponent } from '../shared/markdown-render.component';
+
 @Component({
   selector: 'app-knowledge-base',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, MarkdownRenderComponent],
   templateUrl: './knowledge-base.component.html',
   styleUrl: './knowledge-base.component.css'
 })

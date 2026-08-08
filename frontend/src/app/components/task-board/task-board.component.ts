@@ -8,10 +8,12 @@ import { AiService } from '../../services/ai.service';
 import { ClientAiService, ToneResult } from '../../services/client-ai.service';
 import { WorkItem, WorkItemPriority, WorkItemStatus } from '../../models/work-item.model';
 
+import { MarkdownRenderComponent } from '../shared/markdown-render.component';
+
 @Component({
   selector: 'app-task-board',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, MarkdownRenderComponent],
   templateUrl: './task-board.component.html',
   styleUrl: './task-board.component.css'
 })

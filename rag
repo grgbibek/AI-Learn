@@ -1,0 +1,116 @@
+Yes — **usually, RAG uses an LLM, but the LLM is only one part of the pipeline.**
+
+Think of it as:
+
+```text
+                 Your Question
+                      │
+                      ▼
+              ┌───────────────┐
+              │     RAG       │
+              │   Retriever   │
+              └───────┬───────┘
+                      │
+              Find relevant chunks
+                      │
+                      ▼
+             ┌─────────────────┐
+             │  Vector DB      │
+             │  / Search       │
+             └───────┬─────────┘
+                     │
+              Relevant documents
+                     │
+                     ▼
+            ┌──────────────────┐
+            │       LLM        │
+            │ GPT / Claude etc │
+            └────────┬─────────┘
+                     │
+                     ▼
+                  Answer
+```
+
+### There are actually two different AI steps
+
+**1. Embedding model — retrieval**
+
+When you ingest your documents, you convert text into vectors:
+
+```text
+"Employees receive 20 annual leave days"
+                ↓
+        Embedding model
+                ↓
+        [0.12, -0.43, 0.87, ...]
+```
+
+When you ask:
+
+> How many annual leave days do employees receive?
+
+Your question is also converted into a vector, and your RAG searches for similar vectors.
+
+**2. LLM — answer generation**
+
+RAG retrieves something like:
+
+```text
+Employee Handbook:
+Employees receive 20 annual leave days per year.
+```
+
+Then it sends something conceptually like this to the LLM:
+
+```text
+Question:
+How many annual leave days do employees receive?
+
+Context:
+Employees receive 20 annual leave days per year.
+
+Answer using the context.
+```
+
+The LLM generates:
+
+> Employees receive 20 annual leave days per year.
+
+---
+
+### But RAG doesn't *have* to use an LLM
+
+You could technically build:
+
+```text
+Question
+   ↓
+Embedding
+   ↓
+Vector search
+   ↓
+Relevant document
+   ↓
+Return document
+```
+
+That's still retrieval, but there's no generative LLM involved.
+
+That's why it's useful to separate the concepts:
+
+| Component           | Purpose                                              |
+| ------------------- | ---------------------------------------------------- |
+| **Embedding model** | Converts text into vectors                           |
+| **Vector DB**       | Stores/searches vectors                              |
+| **Retriever**       | Finds relevant information                           |
+| **LLM**             | Generates the final natural-language answer          |
+| **RAG**             | The overall pattern combining retrieval + generation |
+
+So when you say **"I queried my RAG"**, in a typical RAG application the flow is:
+
+> **Question → retrieve relevant knowledge → give knowledge to LLM → LLM answers**
+
+And this is also why your earlier question about *"why do I need RAG if the LLM can answer?"* is important.
+
+The LLM provides the **reasoning and language capability**.
+RAG provides **access to your specific, external, potentially changing knowledge**.

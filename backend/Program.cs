@@ -99,5 +99,6 @@ app.MapAiEndpoints();
 app.MapRagEndpoints();
 app.MapQdrantRagEndpoints();
 app.MapAgentEndpoints();
+app.MapAnalyticsEndpoints();
 
 app.Run();

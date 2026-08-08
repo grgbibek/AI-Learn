@@ -7,9 +7,9 @@ using TaskFlow.Api.Models;
 
 namespace McpServer;
 
-// Read-only tools exposing the TaskFlow WorkItems database to any MCP client (VS Code Copilot,
-// Claude Desktop, Cursor, etc). Deliberately read-only for now - no create/update/delete tools -
-// so a connected AI assistant can never mutate real data, only query it.
+// Read-only query tools exposing the TaskFlow WorkItems database to any MCP client (VS Code Copilot,
+// Claude Desktop, Cursor, etc). Scoped to safe read operations only — no writes here.
+// Write operations (create, status change, priority change) live in WriteWorkItemTools.cs.
 [McpServerToolType]
 public static class WorkItemTools
 {

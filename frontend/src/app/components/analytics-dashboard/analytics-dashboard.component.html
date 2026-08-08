@@ -1,0 +1,95 @@
+<section class="analytics-panel">
+  <header class="analytics-header">
+    <div class="header-title">
+      <span class="icon">📊</span>
+      <div>
+        <h3>AI &amp; Project Analytics Dashboard</h3>
+        <p>Real-time telemetry, agent execution stats, and project workload distribution.</p>
+      </div>
+    </div>
+    <button (click)="refreshMetrics()" [disabled]="analytics.loading()" class="btn-refresh">
+      🔄 Refresh Metrics
+    </button>
+  </header>
+
+  @if (analytics.loading() && !analytics.metrics()) {
+    <div class="skeleton-grid">
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+      <div class="skeleton-card"></div>
+    </div>
+  }
+
+  @if (analytics.error(); as err) {
+    <div class="error-banner">
+      <span>⚠️ {{ err }}</span>
+      <button (click)="refreshMetrics()" class="btn-retry">Retry</button>
+    </div>
+  }
+
+  @if (analytics.metrics(); as m) {
+    <!-- Key Stat Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-label">Total Work Items</span>
+        <span class="stat-value">{{ m.totalWorkItems }}</span>
+        <span class="stat-sub">{{ m.completedWorkItems }} Completed</span>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Completion Velocity</span>
+        <span class="stat-value highlight">{{ m.completionRate }}%</span>
+        <span class="stat-sub">{{ m.pendingWorkItems }} Pending</span>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Multi-Agent Pipeline</span>
+        <span class="stat-value success">{{ m.agentMetrics.approvalRate }}%</span>
+        <span class="stat-sub">{{ m.agentMetrics.totalRuns }} Total Executions</span>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Knowledge Base (RAG)</span>
+        <span class="stat-value info">{{ m.knowledgeBaseMetrics.totalChunks }}</span>
+        <span class="stat-sub">{{ m.knowledgeBaseMetrics.totalDocuments }} Ingested Doc(s)</span>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Client-Side AI Engine</span>
+        <span class="stat-value accent">
+          @if (clientAi.activeEngine() === 'transformers') {
+            Transformers.js
+          } @else {
+            Local NLP Fallback
+          }
+        </span>
+        <span class="stat-sub">Zero-latency In-Browser</span>
+      </div>
+    </div>
+
+    <!-- Dynamic Charts Section -->
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h4>Task Status Breakdown</h4>
+        <div class="canvas-container">
+          <canvas #statusChartCanvas></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <h4>Task Priority Distribution</h4>
+        <div class="canvas-container">
+          <canvas #priorityChartCanvas></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <h4>Multi-Agent Reviewer Audit Rate</h4>
+        <div class="canvas-container">
+          <canvas #agentChartCanvas></canvas>
+        </div>
+      </div>
+    </div>
+  }
+</section>

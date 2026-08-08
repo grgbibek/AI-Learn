@@ -13,6 +13,7 @@ export class WorkItemService {
   private itemsSignal = signal<WorkItem[]>([]);
   readonly loading = signal<boolean>(false);
   readonly error = signal<string | null>(null);
+  readonly optimisticMessage = signal<string | null>(null);
 
   // Filter signals
   readonly selectedStatusFilter = signal<WorkItemStatus | 'All'>('All');
@@ -69,39 +70,51 @@ export class WorkItemService {
     });
   }
 
+  // Optimistic Creation with Rollback
   createWorkItem(req: CreateWorkItemRequest): void {
-    this.loading.set(true);
+    const tempId = -Date.now();
+    const optimisticItem: WorkItem = {
+      id: tempId,
+      title: req.title,
+      description: req.description,
+      priority: req.priority,
+      status: WorkItemStatus.Todo,
+      createdAt: new Date().toISOString(),
+      dueDate: req.dueDate
+    };
+
+    const previousSnapshot = this.itemsSignal();
+    // Optimistic Update
+    this.itemsSignal.update(items => [optimisticItem, ...items]);
+    this.showOptimisticToast('⚡ Task added optimistically');
+
     this.http.post<WorkItem>(this.apiUrl, req).subscribe({
-      next: (newItem: WorkItem) => {
-        this.itemsSignal.update((items: WorkItem[]) => [newItem, ...items]);
-        this.loading.set(false);
+      next: (realItem: WorkItem) => {
+        // Swap temp item with server response
+        this.itemsSignal.update(items => items.map(i => i.id === tempId ? realItem : i));
       },
       error: (err: unknown) => {
-        console.error('Failed to create work item', err);
-        this.error.set('Failed to create work item.');
-        this.loading.set(false);
+        console.error('Failed to create work item, rolling back state', err);
+        // Rollback state
+        this.itemsSignal.set(previousSnapshot);
+        this.error.set('Failed to save task to backend. State rolled back.');
       }
     });
   }
 
-  updateWorkItem(id: number, req: UpdateWorkItemRequest): void {
-    this.loading.set(true);
-    this.http.put<WorkItem>(`${this.apiUrl}/${id}`, req).subscribe({
-      next: (updatedItem: WorkItem) => {
-        this.itemsSignal.update((items: WorkItem[]) =>
-          items.map(item => item.id === id ? updatedItem : item)
-        );
-        this.loading.set(false);
-      },
-      error: (err: unknown) => {
-        console.error('Failed to update work item', err);
-        this.error.set('Failed to update work item.');
-        this.loading.set(false);
-      }
-    });
-  }
-
+  // Optimistic Status Update with Rollback
   updateStatus(id: number, currentItem: WorkItem, newStatus: WorkItemStatus): void {
+    if (currentItem.status === newStatus) return;
+
+    const previousSnapshot = this.itemsSignal();
+
+    // Optimistic Update immediately in UI
+    this.itemsSignal.update(items => items.map(item =>
+      item.id === id ? { ...item, status: newStatus } : item
+    ));
+
+    this.showOptimisticToast(`⚡ Moved to ${newStatus}`);
+
     const updateReq: UpdateWorkItemRequest = {
       title: currentItem.title,
       description: currentItem.description ?? undefined,
@@ -109,21 +122,49 @@ export class WorkItemService {
       status: newStatus,
       dueDate: currentItem.dueDate ?? undefined
     };
-    this.updateWorkItem(id, updateReq);
-  }
 
-  deleteWorkItem(id: number): void {
-    this.loading.set(true);
-    this.http.delete<void>(`${this.apiUrl}/${id}`).subscribe({
-      next: () => {
-        this.itemsSignal.update((items: WorkItem[]) => items.filter(i => i.id !== id));
-        this.loading.set(false);
+    this.http.put<WorkItem>(`${this.apiUrl}/${id}`, updateReq).subscribe({
+      next: (serverUpdatedItem: WorkItem) => {
+        this.itemsSignal.update(items => items.map(item =>
+          item.id === id ? serverUpdatedItem : item
+        ));
       },
       error: (err: unknown) => {
-        console.error('Failed to delete work item', err);
-        this.error.set('Failed to delete work item.');
-        this.loading.set(false);
+        console.error('Status update failed on backend, rolling back state', err);
+        // Rollback state
+        this.itemsSignal.set(previousSnapshot);
+        this.error.set(`Failed to update status for "${currentItem.title}". Rolled back.`);
       }
     });
+  }
+
+  // Optimistic Deletion with Rollback
+  deleteWorkItem(id: number): void {
+    const previousSnapshot = this.itemsSignal();
+    const itemToDelete = previousSnapshot.find(i => i.id === id);
+
+    // Optimistic deletion
+    this.itemsSignal.update(items => items.filter(i => i.id !== id));
+    this.showOptimisticToast('⚡ Task removed optimistically');
+
+    this.http.delete<void>(`${this.apiUrl}/${id}`).subscribe({
+      next: () => {
+        // Confirmed deleted on backend
+      },
+      error: (err: unknown) => {
+        console.error('Failed to delete work item, rolling back state', err);
+        this.itemsSignal.set(previousSnapshot);
+        this.error.set(`Failed to delete "${itemToDelete?.title || 'item'}". State restored.`);
+      }
+    });
+  }
+
+  private showOptimisticToast(msg: string): void {
+    this.optimisticMessage.set(msg);
+    setTimeout(() => {
+      if (this.optimisticMessage() === msg) {
+        this.optimisticMessage.set(null);
+      }
+    }, 2500);
   }
 }

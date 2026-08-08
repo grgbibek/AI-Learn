@@ -81,7 +81,14 @@
   @if (ai.assistantResponse(); as res) {
     <div class="ai-assistant-response">
       <strong>Tool used:</strong> {{ res.toolRegistered }}
-      <p>{{ res.response }}</p>
+      <app-markdown-render [content]="res.response"></app-markdown-render>
+    </div>
+  }
+
+  <!-- Optimistic Notification Toast -->
+  @if (service.optimisticMessage(); as toast) {
+    <div class="toast-optimistic">
+      {{ toast }}
     </div>
   }
 
