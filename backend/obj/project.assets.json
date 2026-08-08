@@ -4437,11 +4437,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\Projects\\vibe\\rigo\\backend\\backend.csproj",
+      "projectUniqueName": "d:\\Projects\\vibe\\rigo\\backend\\backend.csproj",
       "projectName": "backend",
-      "projectPath": "D:\\Projects\\vibe\\rigo\\backend\\backend.csproj",
+      "projectPath": "d:\\Projects\\vibe\\rigo\\backend\\backend.csproj",
       "packagesPath": "C:\\Users\\grgbi\\.nuget\\packages\\",
-      "outputPath": "D:\\Projects\\vibe\\rigo\\backend\\obj\\",
+      "outputPath": "d:\\Projects\\vibe\\rigo\\backend\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

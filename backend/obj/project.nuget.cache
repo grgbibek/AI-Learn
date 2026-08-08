@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "DRCXVwiRBq0=",
+  "dgSpecHash": "bRlmPGgFvio=",
   "success": true,
-  "projectFilePath": "D:\\Projects\\vibe\\rigo\\backend\\backend.csproj",
+  "projectFilePath": "d:\\Projects\\vibe\\rigo\\backend\\backend.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\grgbi\\.nuget\\packages\\azure.ai.openai\\2.9.0-beta.1\\azure.ai.openai.2.9.0-beta.1.nupkg.sha512",
     "C:\\Users\\grgbi\\.nuget\\packages\\azure.core\\1.51.1\\azure.core.1.51.1.nupkg.sha512",
@@ -86,9 +86,9 @@
       "code": "NU1903",
       "level": "Warning",
       "message": "Package 'Microsoft.OpenApi' 2.0.0 has a known high severity vulnerability, https://github.com/advisories/GHSA-v5pm-xwqc-g5wc",
-      "projectPath": "D:\\Projects\\vibe\\rigo\\backend\\backend.csproj",
+      "projectPath": "d:\\Projects\\vibe\\rigo\\backend\\backend.csproj",
       "warningLevel": 1,
-      "filePath": "D:\\Projects\\vibe\\rigo\\backend\\backend.csproj",
+      "filePath": "d:\\Projects\\vibe\\rigo\\backend\\backend.csproj",
       "libraryId": "Microsoft.OpenApi",
       "targetGraphs": [
         "net10.0"

@@ -1,7 +1,6 @@
 {
-  "servers": {
+  "mcpServers": {
     "taskflow-workitems": {
-      "type": "stdio",
       "command": "dotnet",
       "args": [
         "run",
@@ -11,3 +10,4 @@
     }
   }
 }
+
