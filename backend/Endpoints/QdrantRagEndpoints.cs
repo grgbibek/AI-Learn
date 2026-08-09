@@ -23,10 +23,13 @@ public static class QdrantRagEndpoints
             [FromBody] IngestDocumentRequest request,
             [FromServices] QdrantClient qdrant,
             [FromServices] TextChunkingService chunker,
+            [FromServices] DataSanitizationService dataSanitizer,
             [FromServices] IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
             CancellationToken ct) =>
         {
-            var chunks = chunker.ChunkText(request.Content);
+            var titleSanitization = dataSanitizer.Sanitize(request.Title);
+            var contentSanitization = dataSanitizer.Sanitize(request.Content);
+            var chunks = chunker.ChunkText(contentSanitization.SanitizedText);
             if (chunks.Count == 0)
             {
                 return Results.BadRequest(new { Message = "No content to ingest." });
@@ -42,7 +45,7 @@ public static class QdrantRagEndpoints
                 Vectors = embeddings[index].Vector.ToArray(),
                 Payload =
                 {
-                    ["sourceTitle"] = request.Title,
+                    ["sourceTitle"] = titleSanitization.SanitizedText,
                     ["content"] = text,
                     ["chunkIndex"] = index
                 }
@@ -52,9 +55,10 @@ public static class QdrantRagEndpoints
 
             return Results.Ok(new
             {
-                request.Title,
+                Title = titleSanitization.SanitizedText,
                 ChunksCreated = points.Count,
-                Store = "Qdrant"
+                Store = "Qdrant",
+                Sanitization = BuildSanitizationSummary(titleSanitization, contentSanitization)
             });
         });
 
@@ -63,8 +67,10 @@ public static class QdrantRagEndpoints
             [FromServices] QdrantClient qdrant,
             [FromServices] IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
             [FromServices] IChatClient chatClient,
+            [FromServices] DataSanitizationService dataSanitizer,
             CancellationToken ct) =>
         {
+            var questionSanitization = dataSanitizer.Sanitize(request.Question);
             var topK = request.TopK <= 0 ? 3 : request.TopK;
 
             var collectionExists = await qdrant.CollectionExistsAsync(CollectionName, ct);
@@ -73,7 +79,7 @@ public static class QdrantRagEndpoints
                 return Results.BadRequest(new { Message = "Knowledge base is empty. Ingest a document first via /api/rag/qdrant/ingest." });
             }
 
-            var questionVector = (await embeddingGenerator.GenerateAsync(request.Question, cancellationToken: ct)).Vector.ToArray();
+            var questionVector = (await embeddingGenerator.GenerateAsync(questionSanitization.SanitizedText, cancellationToken: ct)).Vector.ToArray();
 
             // Qdrant's HNSW index runs the ANN search server-side - no full-scan needed,
             // and no embeddings ever get deserialized back into this process either.
@@ -91,15 +97,15 @@ public static class QdrantRagEndpoints
 
             var sources = hits.Select(h => new
             {
-                SourceTitle = h.Payload["sourceTitle"].StringValue,
-                Content = h.Payload["content"].StringValue,
+                SourceTitle = dataSanitizer.Sanitize(h.Payload["sourceTitle"].StringValue),
+                Content = dataSanitizer.Sanitize(h.Payload["content"].StringValue),
                 ChunkIndex = (int)h.Payload["chunkIndex"].IntegerValue,
                 Score = h.Score
             }).ToList();
 
             var context = string.Join(
                 "\n\n---\n\n",
-                sources.Select(x => $"[Source: {x.SourceTitle}]\n{x.Content}"));
+                sources.Select(x => $"[Source: {x.SourceTitle.SanitizedText}]\n{x.Content.SanitizedText}"));
 
             var prompt = $"""
                 You are a helpful assistant answering questions using ONLY the provided context.
@@ -113,21 +119,43 @@ public static class QdrantRagEndpoints
                 Context:
                 {context}
 
-                Question: {request.Question}
+                Question: {questionSanitization.SanitizedText}
                 """;
 
             var response = await chatClient.GetResponseAsync(prompt, cancellationToken: ct);
+            var answerSanitization = dataSanitizer.Sanitize(response.Text);
 
             return Results.Ok(new
             {
-                request.Question,
-                Answer = response.Text,
+                Question = questionSanitization.SanitizedText,
+                Answer = answerSanitization.SanitizedText,
                 Store = "Qdrant (HNSW ANN search)",
-                Sources = sources.Select(x => new { x.SourceTitle, x.ChunkIndex, VectorScore = Math.Round(x.Score, 4) })
+                Sanitization = BuildSanitizationSummary(
+                    [questionSanitization, answerSanitization, .. sources.SelectMany(x => new[] { x.SourceTitle, x.Content })]),
+                Sources = sources.Select(x => new
+                {
+                    SourceTitle = x.SourceTitle.SanitizedText,
+                    x.ChunkIndex,
+                    VectorScore = Math.Round(x.Score, 4)
+                })
             });
         });
 
         return routes;
+    }
+
+    private static object BuildSanitizationSummary(params SanitizationResult[] results)
+    {
+        var detectedTypes = results
+            .SelectMany(result => result.DetectedTypes)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return new
+        {
+            WasSanitized = results.Any(result => result.WasSanitized),
+            DetectedTypes = detectedTypes
+        };
     }
 
     private static async Task EnsureCollectionExistsAsync(QdrantClient qdrant, CancellationToken ct)

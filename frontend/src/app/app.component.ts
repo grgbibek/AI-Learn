@@ -57,6 +57,15 @@ export type ActiveTab = 'board' | 'analytics' | 'rag' | 'agent' | 'all';
             </button>
           </nav>
 
+          <div class="resource-links" aria-label="Local AI tools">
+            <a href="http://localhost:11434" target="_blank" rel="noopener noreferrer" class="resource-link">
+              Ollama
+            </a>
+            <a href="http://localhost:18888" target="_blank" rel="noopener noreferrer" class="resource-link">
+              Aspire Dashboard
+            </a>
+          </div>
+
           <p class="subtitle">Phase 4 — Streaming AI UI &amp; Analytics</p>
         </div>
       </header>
@@ -163,6 +172,27 @@ export type ActiveTab = 'board' | 'analytics' | 'rag' | 'agent' | 'all';
     }
     .tab-btn-all.active {
       background: #8b5cf6;
+    }
+    .resource-links {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .resource-link {
+      color: #93c5fd;
+      border: 1px solid #334155;
+      background: #0f172a;
+      border-radius: 6px;
+      padding: 0.4rem 0.65rem;
+      text-decoration: none;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+    .resource-link:hover {
+      color: #f8fafc;
+      border-color: #3b82f6;
+      background: rgba(59, 130, 246, 0.14);
     }
     .subtitle {
       color: #64748b;

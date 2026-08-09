@@ -14,12 +14,17 @@
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10" />
     <PackageReference Include="Microsoft.Extensions.AI" Version="10.8.3" />
+    <PackageReference Include="Microsoft.KernelMemory.Core" Version="0.98.250508.3" />
+    <PackageReference Include="Microsoft.KernelMemory.AI.Ollama" Version="0.98.250508.3" />
     <PackageReference Include="Microsoft.SemanticKernel" Version="1.*" />
     <PackageReference Include="Microsoft.SemanticKernel.Connectors.Ollama" Version="1.79.0-alpha" />
     <PackageReference Include="OllamaSharp" Version="5.4.30" />
     <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.17.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.17.0" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.17.0" />
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.17.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.17.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.SqlClient" Version="1.17.0" />
     <PackageReference Include="Qdrant.Client" Version="1.19.0" />
     <PackageReference Include="Scalar.AspNetCore" Version="2.16.17" />
   </ItemGroup>

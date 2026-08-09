@@ -22,22 +22,32 @@ export interface SemanticSimilarityResponse {
 
 export interface IngestDocumentResponse {
   title: string;
-  chunksCreated: number;
+  chunksCreated?: number;
+  documentId?: string;
+  store?: string;
+}
+
+export interface KernelMemoryPartition {
+  sanitizedText: string;
+  relevance: number;
 }
 
 export interface KnowledgeSource {
-  sourceTitle: string;
-  chunkIndex: number;
-  vectorScore: number;
-  keywordScore: number;
-  fusedScore: number;
-  rerankPosition: number;
+  sourceTitle?: string;
+  sourceName?: string;
+  chunkIndex?: number;
+  vectorScore?: number;
+  keywordScore?: number;
+  fusedScore?: number;
+  rerankPosition?: number;
+  partitions?: KernelMemoryPartition[];
 }
 
 export interface AskKnowledgeBaseResponse {
   question: string;
   answer: string;
-  rerankMethod: string;
+  rerankMethod?: string;
+  store?: string;
   sources: KnowledgeSource[];
 }
 

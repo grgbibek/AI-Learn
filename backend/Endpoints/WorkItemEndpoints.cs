@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using TaskFlow.Api.Data;
 using TaskFlow.Api.Models;
 
@@ -26,7 +27,7 @@ public static class WorkItemEndpoints
         });
 
         // POST create work item
-        group.MapPost("/", async ([FromBody] CreateWorkItemRequest req, AppDbContext db) =>
+        group.MapPost("/", async ([FromBody] CreateWorkItemRequest req, AppDbContext db, IMemoryCache cache) =>
         {
             if (string.IsNullOrWhiteSpace(req.Title))
             {
@@ -45,12 +46,13 @@ public static class WorkItemEndpoints
 
             db.WorkItems.Add(item);
             await db.SaveChangesAsync();
+            cache.Remove(AppCacheKeys.AnalyticsMetrics);
 
             return Results.Created($"/api/workitems/{item.Id}", item);
         });
 
         // PUT update work item
-        group.MapPut("/{id:int}", async (int id, [FromBody] UpdateWorkItemRequest req, AppDbContext db) =>
+        group.MapPut("/{id:int}", async (int id, [FromBody] UpdateWorkItemRequest req, AppDbContext db, IMemoryCache cache) =>
         {
             var item = await db.WorkItems.FindAsync(id);
             if (item is null) return Results.NotFound();
@@ -67,17 +69,19 @@ public static class WorkItemEndpoints
             item.DueDate = req.DueDate;
 
             await db.SaveChangesAsync();
+            cache.Remove(AppCacheKeys.AnalyticsMetrics);
             return Results.Ok(item);
         });
 
         // DELETE work item
-        group.MapDelete("/{id:int}", async (int id, AppDbContext db) =>
+        group.MapDelete("/{id:int}", async (int id, AppDbContext db, IMemoryCache cache) =>
         {
             var item = await db.WorkItems.FindAsync(id);
             if (item is null) return Results.NotFound();
 
             db.WorkItems.Remove(item);
             await db.SaveChangesAsync();
+            cache.Remove(AppCacheKeys.AnalyticsMetrics);
             return Results.NoContent();
         });
 

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using TaskFlow.Api.Data;
 using TaskFlow.Api.Models;
 
@@ -10,63 +11,70 @@ public static class AnalyticsEndpoints
     {
         var group = app.MapGroup("/api/analytics");
 
-        group.MapGet("/metrics", async (AppDbContext db) =>
+        group.MapGet("/metrics", async (
+            AppDbContext db,
+            IMemoryCache cache,
+            CancellationToken ct) =>
         {
-            var workItems = await db.WorkItems.ToListAsync();
-            var auditLogs = await db.AgentAuditLogs.ToListAsync();
-            var docChunks = await db.DocumentChunks.ToListAsync();
+            var response = await cache.GetOrCreateAsync(AppCacheKeys.AnalyticsMetrics, async entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(30);
 
-            var totalTasks = workItems.Count;
-            var todoCount = workItems.Count(w => w.Status == WorkItemStatus.Todo);
-            var inProgressCount = workItems.Count(w => w.Status == WorkItemStatus.InProgress);
-            var doneCount = workItems.Count(w => w.Status == WorkItemStatus.Done);
+                var totalTasks = await db.WorkItems.CountAsync(ct);
+                var todoCount = await db.WorkItems.CountAsync(w => w.Status == WorkItemStatus.Todo, ct);
+                var inProgressCount = await db.WorkItems.CountAsync(w => w.Status == WorkItemStatus.InProgress, ct);
+                var doneCount = await db.WorkItems.CountAsync(w => w.Status == WorkItemStatus.Done, ct);
 
-            var lowPriorityCount = workItems.Count(w => w.Priority == WorkItemPriority.Low);
-            var medPriorityCount = workItems.Count(w => w.Priority == WorkItemPriority.Medium);
-            var highPriorityCount = workItems.Count(w => w.Priority == WorkItemPriority.High);
-            var criticalPriorityCount = workItems.Count(w => w.Priority == WorkItemPriority.Critical);
+                var lowPriorityCount = await db.WorkItems.CountAsync(w => w.Priority == WorkItemPriority.Low, ct);
+                var medPriorityCount = await db.WorkItems.CountAsync(w => w.Priority == WorkItemPriority.Medium, ct);
+                var highPriorityCount = await db.WorkItems.CountAsync(w => w.Priority == WorkItemPriority.High, ct);
+                var criticalPriorityCount = await db.WorkItems.CountAsync(w => w.Priority == WorkItemPriority.Critical, ct);
 
-            var totalAgentRuns = auditLogs.Count;
-            var approvedAgentRuns = auditLogs.Count(a => a.Approved);
-            var rejectedAgentRuns = auditLogs.Count(a => !a.Approved);
-            var approvalRate = totalAgentRuns > 0 ? (double)approvedAgentRuns / totalAgentRuns * 100 : 100.0;
+                var totalAgentRuns = await db.AgentAuditLogs.CountAsync(ct);
+                var approvedAgentRuns = await db.AgentAuditLogs.CountAsync(a => a.Approved, ct);
+                var rejectedAgentRuns = totalAgentRuns - approvedAgentRuns;
+                var approvalRate = totalAgentRuns > 0 ? (double)approvedAgentRuns / totalAgentRuns * 100 : 100.0;
 
-            var totalChunks = docChunks.Count;
-            var totalDocuments = docChunks.Select(c => c.SourceTitle).Distinct().Count();
+                var totalChunks = await db.DocumentChunks.CountAsync(ct);
+                var totalDocuments = await db.DocumentChunks
+                    .Select(c => c.SourceTitle)
+                    .Distinct()
+                    .CountAsync(ct);
 
-            var completionRate = totalTasks > 0 ? (double)doneCount / totalTasks * 100 : 0.0;
+                var completionRate = totalTasks > 0 ? (double)doneCount / totalTasks * 100 : 0.0;
 
-            var response = new AnalyticsMetricsResponse(
-                TotalWorkItems: totalTasks,
-                CompletedWorkItems: doneCount,
-                PendingWorkItems: todoCount + inProgressCount,
-                CompletionRate: Math.Round(completionRate, 1),
+                return new AnalyticsMetricsResponse(
+                    TotalWorkItems: totalTasks,
+                    CompletedWorkItems: doneCount,
+                    PendingWorkItems: todoCount + inProgressCount,
+                    CompletionRate: Math.Round(completionRate, 1),
 
-                StatusDistribution: new StatusDistribution(
-                    Todo: todoCount,
-                    InProgress: inProgressCount,
-                    Done: doneCount
-                ),
+                    StatusDistribution: new StatusDistribution(
+                        Todo: todoCount,
+                        InProgress: inProgressCount,
+                        Done: doneCount
+                    ),
 
-                PriorityDistribution: new PriorityDistribution(
-                    Low: lowPriorityCount,
-                    Medium: medPriorityCount,
-                    High: highPriorityCount,
-                    Critical: criticalPriorityCount
-                ),
+                    PriorityDistribution: new PriorityDistribution(
+                        Low: lowPriorityCount,
+                        Medium: medPriorityCount,
+                        High: highPriorityCount,
+                        Critical: criticalPriorityCount
+                    ),
 
-                AgentMetrics: new AgentPipelineMetrics(
-                    TotalRuns: totalAgentRuns,
-                    ApprovedRuns: approvedAgentRuns,
-                    RejectedRuns: rejectedAgentRuns,
-                    ApprovalRate: Math.Round(approvalRate, 1)
-                ),
+                    AgentMetrics: new AgentPipelineMetrics(
+                        TotalRuns: totalAgentRuns,
+                        ApprovedRuns: approvedAgentRuns,
+                        RejectedRuns: rejectedAgentRuns,
+                        ApprovalRate: Math.Round(approvalRate, 1)
+                    ),
 
-                KnowledgeBaseMetrics: new KnowledgeBaseMetrics(
-                    TotalDocuments: totalDocuments,
-                    TotalChunks: totalChunks
-                )
-            );
+                    KnowledgeBaseMetrics: new KnowledgeBaseMetrics(
+                        TotalDocuments: totalDocuments,
+                        TotalChunks: totalChunks
+                    )
+                );
+            });
 
             return Results.Ok(response);
         })

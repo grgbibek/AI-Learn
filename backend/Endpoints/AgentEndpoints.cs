@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Caching.Memory;
 using TaskFlow.Api.Data;
 using TaskFlow.Api.Models;
 
@@ -34,6 +35,7 @@ public static class AgentEndpoints
             [FromBody] PlanFeatureRequest request,
             [FromServices] AppDbContext db,
             [FromServices] IChatClient chatClient,
+            [FromServices] IMemoryCache cache,
             [FromServices] ILoggerFactory loggerFactory,
             CancellationToken ct) =>
         {
@@ -51,6 +53,8 @@ public static class AgentEndpoints
                 var result = await RunDeveloperReviewLoop(request.FeatureRequest, subtask, chatClient, db, logger, ct);
                 results.Add(result);
             }
+
+            cache.Remove(AppCacheKeys.AnalyticsMetrics);
 
             return Results.Ok(new { request.FeatureRequest, Results = results });
         });

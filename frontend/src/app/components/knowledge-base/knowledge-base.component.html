@@ -7,6 +7,25 @@
     </div>
   </header>
 
+  <div class="rag-mode-toggle" role="group" aria-label="Knowledge base mode">
+    <button
+      type="button"
+      class="rag-mode-option"
+      [class.active]="mode() === 'sqlHybrid'"
+      (click)="setMode('sqlHybrid')"
+    >
+      SQL Hybrid RAG
+    </button>
+    <button
+      type="button"
+      class="rag-mode-option"
+      [class.active]="mode() === 'kernelMemory'"
+      (click)="setMode('kernelMemory')"
+    >
+      Kernel Memory
+    </button>
+  </div>
+
   <div class="rag-grid">
     <!-- Ingest -->
     <div class="rag-card">
@@ -27,7 +46,11 @@
       ></textarea>
       <button (click)="onIngest()" [disabled]="ai.ingestLoading()" class="btn-action btn-ai">
         @if (ai.ingestLoading()) {
-          Chunking &amp; embedding…
+          @if (mode() === 'kernelMemory') {
+            Importing memory…
+          } @else {
+            Chunking &amp; embedding…
+          }
         } @else {
           ✨ Ingest Document
         }
@@ -38,7 +61,11 @@
       }
       @if (ai.ingestResult(); as result) {
         <p class="rag-success">
-          ✅ Ingested "{{ result.title }}" as {{ result.chunksCreated }} chunk(s).
+          @if (mode() === 'kernelMemory') {
+            ✅ Imported "{{ result.title }}" into {{ result.store }}.
+          } @else {
+            ✅ Ingested "{{ result.title }}" as {{ result.chunksCreated }} chunk(s).
+          }
         </p>
       }
     </div>
@@ -57,12 +84,16 @@
       <div class="rag-ask-actions">
         <button (click)="onAsk()" [disabled]="ai.askLoading()" class="btn-action btn-ai">
           @if (ai.askLoading()) {
-            Retrieving &amp; thinking…
+            @if (mode() === 'kernelMemory') {
+              Querying memory…
+            } @else {
+              Retrieving &amp; thinking…
+            }
           } @else {
             🔍 Ask
           }
         </button>
-        @if (ai.askLoading()) {
+        @if (ai.askLoading() && mode() === 'sqlHybrid') {
           <button (click)="onStopAsk()" class="btn-action btn-stop">⏹ Stop</button>
         }
       </div>
@@ -77,35 +108,51 @@
         <div class="rag-answer">
           <strong>Answer:</strong>
           <app-markdown-render [content]="result.answer"></app-markdown-render>
-          @if (ai.askLoading()) {
+          @if (ai.askLoading() && mode() === 'sqlHybrid') {
             <span class="streaming-cursor">▌</span>
           }
           <div class="rag-sources">
-            <strong>Sources</strong> <span class="rag-rerank-badge">rerank: {{ result.rerankMethod }}</span>
-            <table class="rag-sources-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Source</th>
-                  <th>Chunk</th>
-                  <th>Vector</th>
-                  <th>Keyword (BM25)</th>
-                  <th>Fused (RRF)</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (source of result.sources; track source.chunkIndex + source.sourceTitle) {
-                  <tr>
-                    <td>{{ source.rerankPosition }}</td>
-                    <td>{{ source.sourceTitle }}</td>
-                    <td>{{ source.chunkIndex }}</td>
-                    <td>{{ source.vectorScore }}</td>
-                    <td>{{ source.keywordScore }}</td>
-                    <td>{{ source.fusedScore }}</td>
-                  </tr>
+            <strong>Sources</strong>
+            @if (mode() === 'kernelMemory') {
+              <span class="rag-rerank-badge">{{ result.store }}</span>
+              <div class="rag-km-sources">
+                @for (source of result.sources; track $index) {
+                  <div class="rag-km-source">
+                    <span class="rag-source-title">{{ source.sourceName }}</span>
+                    @for (partition of source.partitions; track partition.sanitizedText) {
+                      <p>{{ partition.sanitizedText }}</p>
+                      <span class="rag-rerank-badge">relevance: {{ partition.relevance }}</span>
+                    }
+                  </div>
                 }
-              </tbody>
-            </table>
+              </div>
+            } @else {
+              <span class="rag-rerank-badge">rerank: {{ result.rerankMethod }}</span>
+              <table class="rag-sources-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Source</th>
+                    <th>Chunk</th>
+                    <th>Vector</th>
+                    <th>Keyword (BM25)</th>
+                    <th>Fused (RRF)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (source of result.sources; track $index) {
+                    <tr>
+                      <td>{{ source.rerankPosition }}</td>
+                      <td>{{ source.sourceTitle }}</td>
+                      <td>{{ source.chunkIndex }}</td>
+                      <td>{{ source.vectorScore }}</td>
+                      <td>{{ source.keywordScore }}</td>
+                      <td>{{ source.fusedScore }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
           </div>
         </div>
       }

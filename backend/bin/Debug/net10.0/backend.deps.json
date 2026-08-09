@@ -12,12 +12,17 @@
           "Microsoft.EntityFrameworkCore.Design": "10.0.10",
           "Microsoft.EntityFrameworkCore.SqlServer": "10.0.10",
           "Microsoft.Extensions.AI": "10.8.3",
+          "Microsoft.KernelMemory.AI.Ollama": "0.98.250508.3",
+          "Microsoft.KernelMemory.Core": "0.98.250508.3",
           "Microsoft.SemanticKernel": "1.79.0",
           "Microsoft.SemanticKernel.Connectors.Ollama": "1.79.0-alpha",
           "OllamaSharp": "5.4.30",
           "OpenTelemetry.Exporter.Console": "1.17.0",
+          "OpenTelemetry.Exporter.OpenTelemetryProtocol": "1.17.0",
           "OpenTelemetry.Extensions.Hosting": "1.17.0",
           "OpenTelemetry.Instrumentation.AspNetCore": "1.17.0",
+          "OpenTelemetry.Instrumentation.Http": "1.17.0",
+          "OpenTelemetry.Instrumentation.SqlClient": "1.17.0",
           "Qdrant.Client": "1.19.0",
           "Scalar.AspNetCore": "2.16.17"
         },
@@ -63,6 +68,59 @@
           }
         }
       },
+      "ClosedXML/0.104.2": {
+        "dependencies": {
+          "ClosedXML.Parser": "1.2.0",
+          "DocumentFormat.OpenXml": "3.3.0",
+          "ExcelNumberFormat": "1.1.0",
+          "RBush": "4.0.0",
+          "SixLabors.Fonts": "1.0.0"
+        },
+        "runtime": {
+          "lib/netstandard2.1/ClosedXML.dll": {
+            "assemblyVersion": "0.104.2.0",
+            "fileVersion": "0.104.2.0"
+          }
+        }
+      },
+      "ClosedXML.Parser/1.2.0": {
+        "runtime": {
+          "lib/netstandard2.1/ClosedXML.Parser.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "DocumentFormat.OpenXml/3.3.0": {
+        "dependencies": {
+          "DocumentFormat.OpenXml.Framework": "3.3.0"
+        },
+        "runtime": {
+          "lib/net8.0/DocumentFormat.OpenXml.dll": {
+            "assemblyVersion": "3.3.0.0",
+            "fileVersion": "3.3.0.0"
+          }
+        }
+      },
+      "DocumentFormat.OpenXml.Framework/3.3.0": {
+        "dependencies": {
+          "System.IO.Packaging": "8.0.1"
+        },
+        "runtime": {
+          "lib/net8.0/DocumentFormat.OpenXml.Framework.dll": {
+            "assemblyVersion": "3.3.0.0",
+            "fileVersion": "3.3.0.0"
+          }
+        }
+      },
+      "ExcelNumberFormat/1.1.0": {
+        "runtime": {
+          "lib/netstandard2.0/ExcelNumberFormat.dll": {
+            "assemblyVersion": "1.1.0.0",
+            "fileVersion": "1.1.0.0"
+          }
+        }
+      },
       "Google.Protobuf/3.31.0": {
         "runtime": {
           "lib/net5.0/Google.Protobuf.dll": {
@@ -98,6 +156,14 @@
           "lib/net8.0/Grpc.Net.Common.dll": {
             "assemblyVersion": "2.0.0.0",
             "fileVersion": "2.71.0.0"
+          }
+        }
+      },
+      "HtmlAgilityPack/1.12.1": {
+        "runtime": {
+          "lib/net8.0/HtmlAgilityPack.dll": {
+            "assemblyVersion": "1.12.1.0",
+            "fileVersion": "1.12.1.0"
           }
         }
       },
@@ -715,6 +781,122 @@
           }
         }
       },
+      "Microsoft.KernelMemory.Abstractions/0.98.250508.3": {
+        "dependencies": {
+          "Microsoft.SemanticKernel.Abstractions": "1.79.0",
+          "System.Linq.Async": "6.0.1",
+          "System.Memory.Data": "10.0.3",
+          "System.Numerics.Tensors": "10.0.10"
+        },
+        "runtime": {
+          "lib/net8.0/Microsoft.KernelMemory.Abstractions.dll": {
+            "assemblyVersion": "0.98.0.0",
+            "fileVersion": "0.98.0.0"
+          }
+        }
+      },
+      "Microsoft.KernelMemory.AI.Ollama/0.98.250508.3": {
+        "dependencies": {
+          "Microsoft.KernelMemory.AI.Tiktoken": "0.98.250508.3",
+          "Microsoft.KernelMemory.Abstractions": "0.98.250508.3",
+          "OllamaSharp": "5.4.30"
+        },
+        "runtime": {
+          "lib/net8.0/Microsoft.KernelMemory.AI.Ollama.dll": {
+            "assemblyVersion": "0.98.0.0",
+            "fileVersion": "0.98.0.0"
+          }
+        }
+      },
+      "Microsoft.KernelMemory.AI.Tiktoken/0.98.250508.3": {
+        "dependencies": {
+          "Microsoft.KernelMemory.Abstractions": "0.98.250508.3",
+          "Microsoft.ML.Tokenizers.Data.Cl100kBase": "1.0.2",
+          "Microsoft.ML.Tokenizers.Data.O200kBase": "1.0.2",
+          "Microsoft.ML.Tokenizers.Data.P50kBase": "1.0.2"
+        },
+        "runtime": {
+          "lib/net8.0/Microsoft.KernelMemory.AI.Tiktoken.dll": {
+            "assemblyVersion": "0.98.0.0",
+            "fileVersion": "0.98.0.0"
+          }
+        }
+      },
+      "Microsoft.KernelMemory.Chunkers/0.98.250508.3": {
+        "dependencies": {
+          "Microsoft.KernelMemory.AI.Tiktoken": "0.98.250508.3",
+          "Microsoft.KernelMemory.Abstractions": "0.98.250508.3"
+        },
+        "runtime": {
+          "lib/net8.0/Microsoft.KernelMemory.Chunkers.dll": {
+            "assemblyVersion": "0.98.0.0",
+            "fileVersion": "0.98.0.0"
+          }
+        }
+      },
+      "Microsoft.KernelMemory.Core/0.98.250508.3": {
+        "dependencies": {
+          "ClosedXML": "0.104.2",
+          "DocumentFormat.OpenXml": "3.3.0",
+          "HtmlAgilityPack": "1.12.1",
+          "Microsoft.KernelMemory.AI.Tiktoken": "0.98.250508.3",
+          "Microsoft.KernelMemory.Abstractions": "0.98.250508.3",
+          "Microsoft.KernelMemory.Chunkers": "0.98.250508.3",
+          "PdfPig": "0.1.10",
+          "Polly.Core": "8.5.2",
+          "System.Linq.Async": "6.0.1"
+        },
+        "runtime": {
+          "lib/net8.0/Microsoft.KernelMemory.Core.dll": {
+            "assemblyVersion": "0.98.0.0",
+            "fileVersion": "0.98.0.0"
+          }
+        }
+      },
+      "Microsoft.ML.Tokenizers/1.0.2": {
+        "dependencies": {
+          "Google.Protobuf": "3.31.0"
+        },
+        "runtime": {
+          "lib/net8.0/Microsoft.ML.Tokenizers.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.225.12505"
+          }
+        }
+      },
+      "Microsoft.ML.Tokenizers.Data.Cl100kBase/1.0.2": {
+        "dependencies": {
+          "Microsoft.ML.Tokenizers": "1.0.2"
+        },
+        "runtime": {
+          "lib/netstandard2.0/Microsoft.ML.Tokenizers.Data.Cl100kBase.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.225.12505"
+          }
+        }
+      },
+      "Microsoft.ML.Tokenizers.Data.O200kBase/1.0.2": {
+        "dependencies": {
+          "Microsoft.ML.Tokenizers": "1.0.2"
+        },
+        "runtime": {
+          "lib/netstandard2.0/Microsoft.ML.Tokenizers.Data.O200kBase.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.225.12505"
+          }
+        }
+      },
+      "Microsoft.ML.Tokenizers.Data.P50kBase/1.0.2": {
+        "dependencies": {
+          "Microsoft.ML.Tokenizers": "1.0.2"
+        },
+        "runtime": {
+          "lib/netstandard2.0/Microsoft.ML.Tokenizers.Data.P50kBase.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.225.12505"
+          }
+        }
+      },
       "Microsoft.OpenApi/2.0.0": {
         "runtime": {
           "lib/net8.0/Microsoft.OpenApi.dll": {
@@ -898,6 +1080,17 @@
           }
         }
       },
+      "OpenTelemetry.Exporter.OpenTelemetryProtocol/1.17.0": {
+        "dependencies": {
+          "OpenTelemetry": "1.17.0"
+        },
+        "runtime": {
+          "lib/net10.0/OpenTelemetry.Exporter.OpenTelemetryProtocol.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.17.0.2115"
+          }
+        }
+      },
       "OpenTelemetry.Extensions.Hosting/1.17.0": {
         "dependencies": {
           "OpenTelemetry": "1.17.0"
@@ -920,6 +1113,68 @@
           }
         }
       },
+      "OpenTelemetry.Instrumentation.Http/1.17.0": {
+        "dependencies": {
+          "OpenTelemetry.Api.ProviderBuilderExtensions": "1.17.0"
+        },
+        "runtime": {
+          "lib/net10.0/OpenTelemetry.Instrumentation.Http.dll": {
+            "assemblyVersion": "1.17.0.1210",
+            "fileVersion": "1.17.0.1210"
+          }
+        }
+      },
+      "OpenTelemetry.Instrumentation.SqlClient/1.17.0": {
+        "dependencies": {
+          "OpenTelemetry.Api.ProviderBuilderExtensions": "1.17.0"
+        },
+        "runtime": {
+          "lib/net10.0/OpenTelemetry.Instrumentation.SqlClient.dll": {
+            "assemblyVersion": "1.17.0.1216",
+            "fileVersion": "1.17.0.1216"
+          }
+        }
+      },
+      "PdfPig/0.1.10": {
+        "runtime": {
+          "lib/net8.0/UglyToad.PdfPig.Core.dll": {
+            "assemblyVersion": "0.1.10.0",
+            "fileVersion": "0.1.10.0"
+          },
+          "lib/net8.0/UglyToad.PdfPig.DocumentLayoutAnalysis.dll": {
+            "assemblyVersion": "0.1.10.0",
+            "fileVersion": "0.1.10.0"
+          },
+          "lib/net8.0/UglyToad.PdfPig.Fonts.dll": {
+            "assemblyVersion": "0.1.10.0",
+            "fileVersion": "0.1.10.0"
+          },
+          "lib/net8.0/UglyToad.PdfPig.Package.dll": {
+            "assemblyVersion": "0.1.10.0",
+            "fileVersion": "0.1.10.0"
+          },
+          "lib/net8.0/UglyToad.PdfPig.Tokenization.dll": {
+            "assemblyVersion": "0.1.10.0",
+            "fileVersion": "0.1.10.0"
+          },
+          "lib/net8.0/UglyToad.PdfPig.Tokens.dll": {
+            "assemblyVersion": "0.1.10.0",
+            "fileVersion": "0.1.10.0"
+          },
+          "lib/net8.0/UglyToad.PdfPig.dll": {
+            "assemblyVersion": "0.1.10.0",
+            "fileVersion": "0.1.10.0"
+          }
+        }
+      },
+      "Polly.Core/8.5.2": {
+        "runtime": {
+          "lib/net8.0/Polly.Core.dll": {
+            "assemblyVersion": "8.0.0.0",
+            "fileVersion": "8.5.2.4319"
+          }
+        }
+      },
       "Qdrant.Client/1.19.0": {
         "dependencies": {
           "Google.Protobuf": "3.31.0",
@@ -932,11 +1187,27 @@
           }
         }
       },
+      "RBush/4.0.0": {
+        "runtime": {
+          "lib/net8.0/RBush.dll": {
+            "assemblyVersion": "4.0.0.0",
+            "fileVersion": "4.0.0.0"
+          }
+        }
+      },
       "Scalar.AspNetCore/2.16.17": {
         "runtime": {
           "lib/net10.0/Scalar.AspNetCore.dll": {
             "assemblyVersion": "2.16.17.0",
             "fileVersion": "2.16.17.0"
+          }
+        }
+      },
+      "SixLabors.Fonts/1.0.0": {
+        "runtime": {
+          "lib/netcoreapp3.1/SixLabors.Fonts.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
           }
         }
       },
@@ -1042,6 +1313,25 @@
           }
         }
       },
+      "System.IO.Packaging/8.0.1": {
+        "runtime": {
+          "lib/net8.0/System.IO.Packaging.dll": {
+            "assemblyVersion": "8.0.0.0",
+            "fileVersion": "8.0.1024.46610"
+          }
+        }
+      },
+      "System.Linq.Async/6.0.1": {
+        "dependencies": {
+          "Microsoft.Bcl.AsyncInterfaces": "10.0.2"
+        },
+        "runtime": {
+          "lib/net6.0/System.Linq.Async.dll": {
+            "assemblyVersion": "6.0.0.0",
+            "fileVersion": "6.0.1.35981"
+          }
+        }
+      },
       "System.Memory.Data/10.0.3": {
         "runtime": {
           "lib/net10.0/System.Memory.Data.dll": {
@@ -1095,6 +1385,41 @@
       "path": "azure.identity/1.14.2",
       "hashPath": "azure.identity.1.14.2.nupkg.sha512"
     },
+    "ClosedXML/0.104.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-gOkSjQ152MhpKmw70cBkJV+FnaZAWzDwM36luRf/7FlWYnNeH++9XYdGTd0Y4KQlVPkKVxy948M5MMsnsGC4GQ==",
+      "path": "closedxml/0.104.2",
+      "hashPath": "closedxml.0.104.2.nupkg.sha512"
+    },
+    "ClosedXML.Parser/1.2.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-w+/0tsxABS3lkSH8EUlA7IGme+mq5T/Puf3DbOiTckmSuUpAUO2LK29oXYByCcWkBv6wcRHxgWlQb1lxkwI0Tw==",
+      "path": "closedxml.parser/1.2.0",
+      "hashPath": "closedxml.parser.1.2.0.nupkg.sha512"
+    },
+    "DocumentFormat.OpenXml/3.3.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-JogRPJNiE6kKvbuCqVRX691pPWeGMqdQgjrUwRYkdpfkMmtElfqAgcRR73geYj7OtBeEpstldZXXzJw27LUI9w==",
+      "path": "documentformat.openxml/3.3.0",
+      "hashPath": "documentformat.openxml.3.3.0.nupkg.sha512"
+    },
+    "DocumentFormat.OpenXml.Framework/3.3.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-R5CLzEoeyr7XDB7g3NTxRobcU19agaxVAhGZm+fZUShJGiU4bw8oUgnA2BNFepigJckfFMayOBMAbV3kDXNInA==",
+      "path": "documentformat.openxml.framework/3.3.0",
+      "hashPath": "documentformat.openxml.framework.3.3.0.nupkg.sha512"
+    },
+    "ExcelNumberFormat/1.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-R3BVHPs9O+RkExbZYTGT0+9HLbi8ZrNij1Yziyw6znd3J7P3uoIR07uwTLGOogtz1p6+0sna66eBoXu7tBiVQA==",
+      "path": "excelnumberformat/1.1.0",
+      "hashPath": "excelnumberformat.1.1.0.nupkg.sha512"
+    },
     "Google.Protobuf/3.31.0": {
       "type": "package",
       "serviceable": true,
@@ -1122,6 +1447,13 @@
       "sha512": "sha512-v0c8R97TwRYwNXlC8GyRXwYTCNufpDfUtj9la+wUrZFzVWkFJuNAltU+c0yI3zu0jl54k7en6u2WKgZgd57r2Q==",
       "path": "grpc.net.common/2.71.0",
       "hashPath": "grpc.net.common.2.71.0.nupkg.sha512"
+    },
+    "HtmlAgilityPack/1.12.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-SP6/2Y26CXtxjXn0Wwsom9Ek35SNWKHEu/IWhNEFejBSSVWWXPRSlpqpBSYWv1SQhYFnwMO01xVbEdK3iRR4hg==",
+      "path": "htmlagilitypack/1.12.1",
+      "hashPath": "htmlagilitypack.1.12.1.nupkg.sha512"
     },
     "Humanizer.Core/2.14.1": {
       "type": "package",
@@ -1340,6 +1672,69 @@
       "path": "microsoft.identitymodel.tokens/7.7.1",
       "hashPath": "microsoft.identitymodel.tokens.7.7.1.nupkg.sha512"
     },
+    "Microsoft.KernelMemory.Abstractions/0.98.250508.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-GdRLjM6rky5A+muKSvVORGGvYLcgz7cOP8r/SkIdS7SHIpbJrJdHqP8tIiZLVbJIy5tu/b76Is5mlfYPnMSlwg==",
+      "path": "microsoft.kernelmemory.abstractions/0.98.250508.3",
+      "hashPath": "microsoft.kernelmemory.abstractions.0.98.250508.3.nupkg.sha512"
+    },
+    "Microsoft.KernelMemory.AI.Ollama/0.98.250508.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-zLMfCU3Qta0qUztJID96QjNyDHtahfB4754Wjh3kO1kAZbDg4lZH+mNSxM0/q+b4nUKtqzTWSvziouOHJ5qkiw==",
+      "path": "microsoft.kernelmemory.ai.ollama/0.98.250508.3",
+      "hashPath": "microsoft.kernelmemory.ai.ollama.0.98.250508.3.nupkg.sha512"
+    },
+    "Microsoft.KernelMemory.AI.Tiktoken/0.98.250508.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-0HsDSIPOukHdXKtsmL2np1PlC9c0K4OrSZYsYVcaegeVla4JYcWaYnUccj1cAigJ+/CkhKRPmq/3MnYUIDBygg==",
+      "path": "microsoft.kernelmemory.ai.tiktoken/0.98.250508.3",
+      "hashPath": "microsoft.kernelmemory.ai.tiktoken.0.98.250508.3.nupkg.sha512"
+    },
+    "Microsoft.KernelMemory.Chunkers/0.98.250508.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-sOjov/+9mVuJK7CC/MhIgZXkBVgGomMmG+yzfRmrhg4Th5mHUShV8p9lLoymONoxalgIkTrR83WtnwNvWYpv8g==",
+      "path": "microsoft.kernelmemory.chunkers/0.98.250508.3",
+      "hashPath": "microsoft.kernelmemory.chunkers.0.98.250508.3.nupkg.sha512"
+    },
+    "Microsoft.KernelMemory.Core/0.98.250508.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-aAswipcpDdTXWORZx/2HdPIcmp4yOO0HcRo4mzyj4Bt2tA5SJI8WEpSn1ZBcNXMvdKbyIUv6Zws22Oe4JoYrMA==",
+      "path": "microsoft.kernelmemory.core/0.98.250508.3",
+      "hashPath": "microsoft.kernelmemory.core.0.98.250508.3.nupkg.sha512"
+    },
+    "Microsoft.ML.Tokenizers/1.0.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-MefL5+IakSE/CWzx4BQQairgY1fXFBVTPtnn7/01Wngsk2248loViqQ1M5+YB8KBwbi0HjcfoMo86h+cSjiEOA==",
+      "path": "microsoft.ml.tokenizers/1.0.2",
+      "hashPath": "microsoft.ml.tokenizers.1.0.2.nupkg.sha512"
+    },
+    "Microsoft.ML.Tokenizers.Data.Cl100kBase/1.0.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-j7aVyeZMS7AqzHHz1JQ+11U5DHLS9EuqsqQ1n66w5HF78SKJNj4CKgFouU/0T4BJjZFzTBUZYJGg6HMOlTeBiQ==",
+      "path": "microsoft.ml.tokenizers.data.cl100kbase/1.0.2",
+      "hashPath": "microsoft.ml.tokenizers.data.cl100kbase.1.0.2.nupkg.sha512"
+    },
+    "Microsoft.ML.Tokenizers.Data.O200kBase/1.0.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-UYLc4tKczait1pwzPEo2E1Pj2bwYvl3VgO3+HPXzrOywF/eV5Bjdhm96nttRbUcW/NxsqWfPo122yeFKy2yvVQ==",
+      "path": "microsoft.ml.tokenizers.data.o200kbase/1.0.2",
+      "hashPath": "microsoft.ml.tokenizers.data.o200kbase.1.0.2.nupkg.sha512"
+    },
+    "Microsoft.ML.Tokenizers.Data.P50kBase/1.0.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-Vs+2gpb+pcTC9UTlXCtc7ZQbv4oSXG7wVhuV0hAnCG8v1QNQLKuGeGC/9u8DBDOUcFfN/DNh+29yyOjOfgn47A==",
+      "path": "microsoft.ml.tokenizers.data.p50kbase/1.0.2",
+      "hashPath": "microsoft.ml.tokenizers.data.p50kbase.1.0.2.nupkg.sha512"
+    },
     "Microsoft.OpenApi/2.0.0": {
       "type": "package",
       "serviceable": true,
@@ -1459,6 +1854,13 @@
       "path": "opentelemetry.exporter.console/1.17.0",
       "hashPath": "opentelemetry.exporter.console.1.17.0.nupkg.sha512"
     },
+    "OpenTelemetry.Exporter.OpenTelemetryProtocol/1.17.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-R1omQOrQpGlS0Cp5UIr/TAiuEA48JrPlgr1NPV5gESiTU7HhWU+ILe2EBSYb1fKdsSavZ7nZkHcUxAzofPqr2A==",
+      "path": "opentelemetry.exporter.opentelemetryprotocol/1.17.0",
+      "hashPath": "opentelemetry.exporter.opentelemetryprotocol.1.17.0.nupkg.sha512"
+    },
     "OpenTelemetry.Extensions.Hosting/1.17.0": {
       "type": "package",
       "serviceable": true,
@@ -1473,6 +1875,34 @@
       "path": "opentelemetry.instrumentation.aspnetcore/1.17.0",
       "hashPath": "opentelemetry.instrumentation.aspnetcore.1.17.0.nupkg.sha512"
     },
+    "OpenTelemetry.Instrumentation.Http/1.17.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-uTwVtxIJ/xB96wGYTaDsbkJVeCFdUxTwvrlDUn2YJixy0UuKc8DvQMzwKNJMTzNFiiyYO9c40id6tUHTmWs33A==",
+      "path": "opentelemetry.instrumentation.http/1.17.0",
+      "hashPath": "opentelemetry.instrumentation.http.1.17.0.nupkg.sha512"
+    },
+    "OpenTelemetry.Instrumentation.SqlClient/1.17.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-d/vGs0xdXjd4SvyPEQmcc/MQ88rbFRrW+7mEWrUf/lh/gneVhZQg91oGZmwJkh+CObhRoKNwF39TPXUXVDzUgA==",
+      "path": "opentelemetry.instrumentation.sqlclient/1.17.0",
+      "hashPath": "opentelemetry.instrumentation.sqlclient.1.17.0.nupkg.sha512"
+    },
+    "PdfPig/0.1.10": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-9baMcYq7yL0QuaI0ZGq24EB5HY6oVa8ZhspEgYfo4gXpTLqk8RMIMlxtWr3mwuxguheIdscIFH2TN77y5y4L8g==",
+      "path": "pdfpig/0.1.10",
+      "hashPath": "pdfpig.0.1.10.nupkg.sha512"
+    },
+    "Polly.Core/8.5.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-1MJKdxv4zwDmiWvYvVN24DsrWUfgQ4F83voH8bhbtLMdPuGy8CfTUzsgQhvyrl1a7hrM6f/ydwLVdVUI0xooUw==",
+      "path": "polly.core/8.5.2",
+      "hashPath": "polly.core.8.5.2.nupkg.sha512"
+    },
     "Qdrant.Client/1.19.0": {
       "type": "package",
       "serviceable": true,
@@ -1480,12 +1910,26 @@
       "path": "qdrant.client/1.19.0",
       "hashPath": "qdrant.client.1.19.0.nupkg.sha512"
     },
+    "RBush/4.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-j3GeRxxLUQdc+UrZnvythdQxi3bd8ayn87VDjfGXrvfodF550n9wR6SgQvpo+YiAv3GJezsu6lK0l47rRqnbdg==",
+      "path": "rbush/4.0.0",
+      "hashPath": "rbush.4.0.0.nupkg.sha512"
+    },
     "Scalar.AspNetCore/2.16.17": {
       "type": "package",
       "serviceable": true,
       "sha512": "sha512-J5FyUxdZE/QbS/s3NSE6XWoBIJwta1eOUBuDbieHm2HSfFELH8hOnxSsoEBreckoekfZ7STsMCMGmmUNPVVosg==",
       "path": "scalar.aspnetcore/2.16.17",
       "hashPath": "scalar.aspnetcore.2.16.17.nupkg.sha512"
+    },
+    "SixLabors.Fonts/1.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-LFQsCZlV0xlUyXAOMUo5kkSl+8zAQXXbbdwWchtk0B4o7zotZhQsQOcJUELGHdfPfm/xDAsz6hONAuV25bJaAg==",
+      "path": "sixlabors.fonts/1.0.0",
+      "hashPath": "sixlabors.fonts.1.0.0.nupkg.sha512"
     },
     "System.ClientModel/1.10.0": {
       "type": "package",
@@ -1556,6 +2000,20 @@
       "sha512": "sha512-rQkO1YbAjLwnDJSMpRhRtrc6XwIcEOcUvoEcge+evurpzSZM3UNK+MZfD3sKyTlYsvknZ6eJjSBfnmXqwOsT9Q==",
       "path": "system.identitymodel.tokens.jwt/7.7.1",
       "hashPath": "system.identitymodel.tokens.jwt.7.7.1.nupkg.sha512"
+    },
+    "System.IO.Packaging/8.0.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-KYkIOAvPexQOLDxPO2g0BVoWInnQhPpkFzRqvNrNrMhVT6kqhVr0zEb6KCHlptLFukxnZrjuMVAnxK7pOGUYrw==",
+      "path": "system.io.packaging/8.0.1",
+      "hashPath": "system.io.packaging.8.0.1.nupkg.sha512"
+    },
+    "System.Linq.Async/6.0.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-0YhHcaroWpQ9UCot3Pizah7ryAzQhNvobLMSxeDIGmnXfkQn8u5owvpOH0K6EVB+z9L7u6Cc4W17Br/+jyttEQ==",
+      "path": "system.linq.async/6.0.1",
+      "hashPath": "system.linq.async.6.0.1.nupkg.sha512"
     },
     "System.Memory.Data/10.0.3": {
       "type": "package",

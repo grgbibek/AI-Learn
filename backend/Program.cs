@@ -1,6 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.KernelMemory;
+using Microsoft.KernelMemory.AI;
+using Microsoft.KernelMemory.AI.Ollama;
+using Microsoft.KernelMemory.Diagnostics;
 using OllamaSharp;
+using OpenTelemetry;
+using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Qdrant.Client;
 using Scalar.AspNetCore;
@@ -12,16 +19,28 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddMemoryCache();
 
 // ─── OpenTelemetry Tracing (Phase 5 - Observability) ─────────────────────────
 // Traces every agent-pipeline call as a span (see AgentTelemetry.Source usage in
-// AgentEndpoints.cs) plus ASP.NET Core's own request spans, printed to the console
-// for local dev visibility - swap the console exporter for Jaeger/OTLP in production.
-builder.Services.AddOpenTelemetry()
+// AgentEndpoints.cs) plus ASP.NET Core, outbound HTTP, and SQL client spans.
+// Console export stays as a local fallback; OTLP sends the same telemetry to visual
+// tools such as the standalone Aspire Dashboard when OTEL_EXPORTER_OTLP_ENDPOINT is set.
+var openTelemetry = builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService(
+        serviceName: "TaskFlow.Api",
+        serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString()))
     .WithTracing(tracing => tracing
         .AddSource(AgentTelemetry.SourceName)
         .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddSqlClientInstrumentation(options => options.RecordException = true)
         .AddConsoleExporter());
+
+if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
+{
+    openTelemetry.UseOtlpExporter();
+}
 
 // ─── Ollama Client (Real Local LLM) ──────────────────────────────────────────
 // Requires Ollama running on http://localhost:11434
@@ -31,6 +50,15 @@ builder.Services.AddOpenTelemetry()
 var ollamaUri = new Uri(builder.Configuration["Ollama:BaseUrl"] ?? "http://localhost:11434");
 var ollamaChatModel  = builder.Configuration["Ollama:ChatModel"]      ?? "llama3.2";
 var ollamaEmbedModel = builder.Configuration["Ollama:EmbeddingModel"] ?? "nomic-embed-text";
+
+SensitiveDataLogger.Enabled = false;
+
+var kernelMemoryOllamaConfig = new OllamaConfig
+{
+    Endpoint = ollamaUri.ToString(),
+    TextModel = new OllamaModelConfig(ollamaChatModel, 131072),
+    EmbeddingModel = new OllamaModelConfig(ollamaEmbedModel, 2048)
+};
 
 // IChatClient → real local Llama model
 // UseFunctionInvocation() auto-executes tool calls (e.g. workload-assistant) and loops until final text is produced.
@@ -45,10 +73,19 @@ builder.Services.AddSingleton<IChatClient>(
 builder.Services.AddSingleton<VectorMathService>();
 builder.Services.AddSingleton<TextChunkingService>();
 builder.Services.AddSingleton<HybridSearchService>();
+builder.Services.AddSingleton<DataSanitizationService>();
 
 // IEmbeddingGenerator → real local nomic-embed-text model (768 dimensions)
-builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(
-    new OllamaApiClient(ollamaUri, ollamaEmbedModel));
+builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(services =>
+    new CachedEmbeddingGenerator(
+        new OllamaApiClient(ollamaUri, ollamaEmbedModel),
+        services.GetRequiredService<IMemoryCache>(),
+        services.GetRequiredService<ILogger<CachedEmbeddingGenerator>>()));
+
+builder.Services.AddSingleton<IKernelMemory>(_ => new KernelMemoryBuilder()
+    .WithOllamaTextGeneration(kernelMemoryOllamaConfig, new CL100KTokenizer())
+    .WithOllamaTextEmbeddingGeneration(kernelMemoryOllamaConfig, new CL100KTokenizer())
+    .Build());
 
 // Dedicated vector database (Phase 3 gap) - standalone Qdrant binary running locally on
 // its default gRPC port 6334, used only by QdrantRagEndpoints.cs as a side-by-side
@@ -98,6 +135,7 @@ app.MapWorkItemEndpoints();
 app.MapAiEndpoints();
 app.MapRagEndpoints();
 app.MapQdrantRagEndpoints();
+app.MapKernelMemoryRagEndpoints();
 app.MapAgentEndpoints();
 app.MapAnalyticsEndpoints();
 

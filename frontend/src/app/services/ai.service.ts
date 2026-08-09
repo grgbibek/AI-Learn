@@ -8,6 +8,8 @@ import {
   AskKnowledgeBaseResponse
 } from '../models/ai.model';
 
+export type KnowledgeBaseMode = 'sqlHybrid' | 'kernelMemory';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -82,12 +84,16 @@ export class AiService {
   readonly askError = signal<string | null>(null);
   private askAbortController: AbortController | null = null;
 
-  ingestDocument(title: string, content: string): void {
+  ingestDocument(title: string, content: string, mode: KnowledgeBaseMode): void {
     this.ingestLoading.set(true);
     this.ingestError.set(null);
     this.ingestResult.set(null);
 
-    this.http.post<IngestDocumentResponse>(`${this.ragUrl}/ingest`, { title, content }).subscribe({
+    const url = mode === 'kernelMemory'
+      ? `${this.ragUrl}/kernel-memory/ingest`
+      : `${this.ragUrl}/ingest`;
+
+    this.http.post<IngestDocumentResponse>(url, { title, content }).subscribe({
       next: (result) => {
         this.ingestResult.set(result);
         this.ingestLoading.set(false);
@@ -101,10 +107,26 @@ export class AiService {
   }
 
   // Streams the answer token-by-token over Server-Sent Events instead of waiting for the full response.
-  askKnowledgeBase(question: string, topK = 3): void {
+  askKnowledgeBase(question: string, topK = 3, mode: KnowledgeBaseMode): void {
     this.askLoading.set(true);
     this.askError.set(null);
     this.askResult.set({ question, answer: '', rerankMethod: '', sources: [] });
+
+    if (mode === 'kernelMemory') {
+      this.askAbortController = null;
+      this.http.post<AskKnowledgeBaseResponse>(`${this.ragUrl}/kernel-memory/ask`, { question }).subscribe({
+        next: (result) => {
+          this.askResult.set(result);
+          this.askLoading.set(false);
+        },
+        error: (err: unknown) => {
+          console.error('Failed to query Kernel Memory knowledge base', err);
+          this.askError.set('Kernel Memory ask failed. Ingest a document first, and make sure the backend/Ollama is running.');
+          this.askLoading.set(false);
+        }
+      });
+      return;
+    }
 
     this.askAbortController = new AbortController();
 

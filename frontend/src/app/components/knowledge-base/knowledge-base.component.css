@@ -48,6 +48,30 @@
   font-size: 0.875rem;
 }
 
+.rag-mode-toggle {
+  display: inline-flex;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 0.2rem;
+  margin-bottom: 1.25rem;
+}
+
+.rag-mode-option {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.82rem;
+  padding: 0.4rem 0.75rem;
+}
+
+.rag-mode-option.active {
+  background: #334155;
+  color: #f8fafc;
+}
+
 .rag-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -199,5 +223,32 @@
 .rag-sources-table th {
   color: #cbd5e1;
   font-weight: 600;
+}
+
+.rag-km-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: 0.5rem;
+}
+
+.rag-km-source {
+  border-top: 1px solid #334155;
+  padding-top: 0.55rem;
+}
+
+.rag-source-title {
+  color: #cbd5e1;
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.rag-km-source p {
+  color: #94a3b8;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  margin: 0 0 0.35rem 0;
 }
 

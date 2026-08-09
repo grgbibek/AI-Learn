@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlTypes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Caching.Memory;
 using TaskFlow.Api.Data;
 using TaskFlow.Api.Models;
 
@@ -22,6 +23,7 @@ public record RetrievedChunk(int Id, string SourceTitle, string Content, int Chu
 public static class RagEndpoints
 {
     private static readonly JsonSerializerOptions SseJsonOptions = new(JsonSerializerDefaults.Web);
+    private sealed record SanitizedRetrievedChunk(RetrievedChunk Chunk, SanitizationResult Title, SanitizationResult Content);
 
     public static IEndpointRouteBuilder MapRagEndpoints(this IEndpointRouteBuilder routes)
     {
@@ -32,10 +34,14 @@ public static class RagEndpoints
             [FromBody] IngestDocumentRequest request,
             [FromServices] AppDbContext db,
             [FromServices] TextChunkingService chunker,
+            [FromServices] DataSanitizationService dataSanitizer,
+            [FromServices] IMemoryCache cache,
             [FromServices] IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
             CancellationToken ct) =>
         {
-            var chunks = chunker.ChunkText(request.Content);
+            var titleSanitization = dataSanitizer.Sanitize(request.Title);
+            var contentSanitization = dataSanitizer.Sanitize(request.Content);
+            var chunks = chunker.ChunkText(contentSanitization.SanitizedText);
             if (chunks.Count == 0)
             {
                 return Results.BadRequest(new { Message = "No content to ingest." });
@@ -49,7 +55,7 @@ public static class RagEndpoints
 
             var documentChunks = chunks.Select((text, index) => new DocumentChunk
             {
-                SourceTitle = request.Title,
+                SourceTitle = titleSanitization.SanitizedText,
                 Content = text,
                 ChunkIndex = index,
                 Embedding = new SqlVector<float>(embeddings[index].Vector)
@@ -57,13 +63,15 @@ public static class RagEndpoints
 
             db.DocumentChunks.AddRange(documentChunks);
             await db.SaveChangesAsync(ct);
+            cache.Remove(AppCacheKeys.AnalyticsMetrics);
 
             return Results.Ok(new
             {
-                request.Title,
+                Title = titleSanitization.SanitizedText,
                 ChunksCreated = documentChunks.Count,
                 FlaggedSuspicious = suspiciousPhrases.Count > 0,
-                SuspiciousPhrases = suspiciousPhrases
+                SuspiciousPhrases = suspiciousPhrases,
+                Sanitization = BuildSanitizationSummary(titleSanitization, contentSanitization)
             });
         });
 
@@ -75,20 +83,24 @@ public static class RagEndpoints
             [FromServices] IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
             [FromServices] HybridSearchService hybridSearch,
             [FromServices] IChatClient chatClient,
+            [FromServices] DataSanitizationService dataSanitizer,
             CancellationToken ct) =>
         {
+            var questionSanitization = dataSanitizer.Sanitize(request.Question);
             var topK = request.TopK <= 0 ? 3 : request.TopK;
             var (finalChunks, rerankMethod) = await RetrieveAndRerankAsync(
-                request.Question, topK, db, embeddingGenerator, hybridSearch, chatClient, ct);
+                questionSanitization.SanitizedText, topK, db, embeddingGenerator, hybridSearch, chatClient, ct);
 
             if (finalChunks.Count == 0)
             {
                 return Results.BadRequest(new { Message = "Knowledge base is empty. Ingest a document first via /api/rag/ingest." });
             }
 
+            var sanitizedChunks = SanitizeRetrievedChunks(finalChunks, dataSanitizer);
+
             var context = string.Join(
                 "\n\n---\n\n",
-                finalChunks.Select(x => $"[Source: {x.SourceTitle}]\n{x.Content}"));
+                sanitizedChunks.Select(x => $"[Source: {x.Title.SanitizedText}]\n{x.Content.SanitizedText}"));
 
             var prompt = $"""
                 You are a helpful assistant answering questions using ONLY the provided context.
@@ -102,24 +114,27 @@ public static class RagEndpoints
                 Context:
                 {context}
 
-                Question: {request.Question}
+                Question: {questionSanitization.SanitizedText}
                 """;
 
             var response = await chatClient.GetResponseAsync(prompt, cancellationToken: ct);
+            var answerSanitization = dataSanitizer.Sanitize(response.Text);
 
             return Results.Ok(new
             {
-                request.Question,
-                Answer = response.Text,
+                Question = questionSanitization.SanitizedText,
+                Answer = answerSanitization.SanitizedText,
                 RerankMethod = rerankMethod,
-                Sources = finalChunks.Select(x => new
+                Sanitization = BuildSanitizationSummary(
+                    [questionSanitization, answerSanitization, .. sanitizedChunks.SelectMany(x => new[] { x.Title, x.Content })]),
+                Sources = sanitizedChunks.Select(x => new
                 {
-                    x.SourceTitle,
-                    x.ChunkIndex,
-                    VectorScore = Math.Round(x.VectorScore, 4),
-                    KeywordScore = Math.Round(x.KeywordScore, 4),
-                    FusedScore = Math.Round(x.FusedScore, 4),
-                    RerankPosition = x.Position
+                    SourceTitle = x.Title.SanitizedText,
+                    x.Chunk.ChunkIndex,
+                    VectorScore = Math.Round(x.Chunk.VectorScore, 4),
+                    KeywordScore = Math.Round(x.Chunk.KeywordScore, 4),
+                    FusedScore = Math.Round(x.Chunk.FusedScore, 4),
+                    RerankPosition = x.Chunk.Position
                 })
             });
         });
@@ -133,16 +148,20 @@ public static class RagEndpoints
             [FromServices] IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
             [FromServices] HybridSearchService hybridSearch,
             [FromServices] IChatClient chatClient,
+            [FromServices] DataSanitizationService dataSanitizer,
             CancellationToken ct) =>
         {
+            var questionSanitization = dataSanitizer.Sanitize(request.Question);
             var topK = request.TopK <= 0 ? 3 : request.TopK;
             var (finalChunks, rerankMethod) = await RetrieveAndRerankAsync(
-                request.Question, topK, db, embeddingGenerator, hybridSearch, chatClient, ct);
+                questionSanitization.SanitizedText, topK, db, embeddingGenerator, hybridSearch, chatClient, ct);
 
             if (finalChunks.Count == 0)
             {
                 return Results.BadRequest(new { Message = "Knowledge base is empty. Ingest a document first via /api/rag/ingest." });
             }
+
+            var sanitizedChunks = SanitizeRetrievedChunks(finalChunks, dataSanitizer);
 
             // SSE: a plain HTTP response kept open, written to in small "event/data" frames as they become available.
             httpContext.Response.ContentType = "text/event-stream";
@@ -162,20 +181,22 @@ public static class RagEndpoints
             await WriteEventAsync("sources", new
             {
                 RerankMethod = rerankMethod,
-                Sources = finalChunks.Select(x => new
+                Sanitization = BuildSanitizationSummary(
+                    [questionSanitization, .. sanitizedChunks.SelectMany(x => new[] { x.Title, x.Content })]),
+                Sources = sanitizedChunks.Select(x => new
                 {
-                    x.SourceTitle,
-                    x.ChunkIndex,
-                    VectorScore = Math.Round(x.VectorScore, 4),
-                    KeywordScore = Math.Round(x.KeywordScore, 4),
-                    FusedScore = Math.Round(x.FusedScore, 4),
-                    RerankPosition = x.Position
+                    SourceTitle = x.Title.SanitizedText,
+                    x.Chunk.ChunkIndex,
+                    VectorScore = Math.Round(x.Chunk.VectorScore, 4),
+                    KeywordScore = Math.Round(x.Chunk.KeywordScore, 4),
+                    FusedScore = Math.Round(x.Chunk.FusedScore, 4),
+                    RerankPosition = x.Chunk.Position
                 })
             });
 
             var context = string.Join(
                 "\n\n---\n\n",
-                finalChunks.Select(x => $"[Source: {x.SourceTitle}]\n{x.Content}"));
+                sanitizedChunks.Select(x => $"[Source: {x.Title.SanitizedText}]\n{x.Content.SanitizedText}"));
 
             var prompt = $"""
                 You are a helpful assistant answering questions using ONLY the provided context.
@@ -189,14 +210,14 @@ public static class RagEndpoints
                 Context:
                 {context}
 
-                Question: {request.Question}
+                Question: {questionSanitization.SanitizedText}
                 """;
 
             await foreach (var update in chatClient.GetStreamingResponseAsync(prompt, cancellationToken: ct))
             {
                 if (!string.IsNullOrEmpty(update.Text))
                 {
-                    await WriteEventAsync("token", new { Text = update.Text });
+                    await WriteEventAsync("token", new { Text = dataSanitizer.Sanitize(update.Text).SanitizedText });
                 }
             }
 
@@ -206,6 +227,29 @@ public static class RagEndpoints
         });
 
         return routes;
+    }
+
+    private static List<SanitizedRetrievedChunk> SanitizeRetrievedChunks(
+        List<RetrievedChunk> chunks,
+        DataSanitizationService dataSanitizer) => chunks
+            .Select(chunk => new SanitizedRetrievedChunk(
+                chunk,
+                dataSanitizer.Sanitize(chunk.SourceTitle),
+                dataSanitizer.Sanitize(chunk.Content)))
+            .ToList();
+
+    private static object BuildSanitizationSummary(params SanitizationResult[] results)
+    {
+        var detectedTypes = results
+            .SelectMany(result => result.DetectedTypes)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return new
+        {
+            WasSanitized = results.Any(result => result.WasSanitized),
+            DetectedTypes = detectedTypes
+        };
     }
 
     // Stages 1-3 of hybrid search: vector + BM25 retrieval, Reciprocal Rank Fusion, then LLM re-ranking
