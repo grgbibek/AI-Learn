@@ -276,7 +276,30 @@ Invoke-RestMethod http://localhost:6333/
 
 ## Optional MCP Server
 
-The MCP server is a separate stdio process, not a web server with a browser URL.
+MCP servers are separate tool processes, not normal web servers with browser URLs. Claude Desktop starts them from `%APPDATA%\Claude\claude_desktop_config.json` when the app launches.
+
+Configured Claude Desktop MCP servers:
+
+| Server | Purpose | Launch Command |
+|---|---|---|
+| `taskflow-workitems` | Custom TaskFlow database/work-item and telemetry tools | `dotnet run --project mcp-server/mcp-server.csproj --no-build` |
+| `playwright` | Existing Microsoft Playwright browser automation MCP | `npx @playwright/mcp@latest` |
+| `filesystem` | Existing MCP for reading/editing files inside this workspace only | `cmd /c npx -y @modelcontextprotocol/server-filesystem <workspace>` |
+| `github` | Official GitHub MCP for read-only repo, issue, and pull request context | `github-mcp-server.exe stdio --read-only` |
+| `tavily` | Tavily remote MCP for current web search, extraction, crawl, and site mapping | `cmd /c npx -y mcp-remote https://mcp.tavily.com/mcp` |
+
+After changing Claude's MCP config, fully quit and reopen Claude Desktop. Opening a second Claude window is not enough if the old process is still running.
+
+Stop Claude completely if needed:
+
+```powershell
+Get-Process claude -ErrorAction SilentlyContinue
+Stop-Process -Name claude -Force
+```
+
+### Custom TaskFlow MCP
+
+The TaskFlow MCP server exposes controlled business tools for the local TaskFlow database and read-only telemetry tools for the local Aspire Dashboard.
 
 VS Code workspace config is in:
 
@@ -293,6 +316,209 @@ dotnet run --project mcp-server/mcp-server.csproj
 Use it only from an MCP-capable client such as Claude Desktop, MCP inspector, or VS Code MCP support if enabled in the environment.
 
 Important: MCP stdio transport uses stdout for JSON-RPC. Logging must go to stderr, which is already configured in `mcp-server/Program.cs`.
+
+Verify TaskFlow MCP tools with the inspector:
+
+```powershell
+$configPath = Join-Path $env:APPDATA "Claude\claude_desktop_config.json"
+npx -y @modelcontextprotocol/inspector --cli --config $configPath --server taskflow-workitems --method tools/list
+```
+
+Expected tools include:
+
+```text
+get_workload_summary
+get_work_items_by_status
+get_overdue_high_priority_items
+create_work_item
+update_work_item_status
+update_work_item_priority
+get_recent_telemetry_traces
+get_failed_telemetry_traces
+get_slowest_telemetry_traces
+get_telemetry_spans_for_trace
+```
+
+TaskFlow telemetry MCP tools query the local Aspire Dashboard directly at `http://localhost:18888/api/telemetry/traces`. They do not mutate app state and do not require a production telemetry backend.
+
+Example telemetry prompts for Claude Desktop:
+
+```text
+Use taskflow-workitems to get the slowest recent telemetry traces and explain which spans took the longest.
+```
+
+```text
+Use taskflow-workitems to get recent failed telemetry traces. If any exist, summarize the likely cause and include the Aspire dashboard link.
+```
+
+```text
+Use taskflow-workitems to get recent traces matching /api/rag, then inspect spans for the slowest trace.
+```
+
+### Playwright MCP
+
+Playwright MCP lets Claude Desktop drive a real browser against the Angular app. It is useful for UI smoke tests, form interactions, navigation checks, and network inspection.
+
+Verify Playwright MCP tools:
+
+```powershell
+$configPath = Join-Path $env:APPDATA "Claude\claude_desktop_config.json"
+npx -y @modelcontextprotocol/inspector --cli --config $configPath --server playwright --method tools/list
+```
+
+Useful Playwright MCP tools include:
+
+```text
+browser_navigate
+browser_snapshot
+browser_click
+browser_type
+browser_fill_form
+browser_network_requests
+browser_take_screenshot
+browser_close
+```
+
+Example Claude prompt after restart:
+
+```text
+Use Playwright to open http://localhost:4200, inspect the TaskFlow UI, and verify the Analytics tab loads.
+```
+
+### Filesystem MCP
+
+Filesystem MCP lets Claude Desktop read, search, and edit files, but it is scoped only to this workspace:
+
+```text
+C:\Users\bibekgurung\Desktop\Rapid\Extras\AI-Learn
+```
+
+Do not expand it to `C:\`, `%USERPROFILE%`, `%APPDATA%`, or other broad folders. Keep it scoped to the project so Claude can help with code/docs without seeing unrelated personal or system files.
+
+Verify filesystem MCP tools:
+
+```powershell
+$configPath = Join-Path $env:APPDATA "Claude\claude_desktop_config.json"
+npx -y @modelcontextprotocol/inspector --cli --config $configPath --server filesystem --method tools/list
+```
+
+Verify the sandboxed directory:
+
+```powershell
+$configPath = Join-Path $env:APPDATA "Claude\claude_desktop_config.json"
+npx -y @modelcontextprotocol/inspector --cli --config $configPath --server filesystem --method tools/call --tool-name list_allowed_directories --tool-arg dummy=unused
+```
+
+Useful filesystem MCP tools include:
+
+```text
+read_text_file
+read_multiple_files
+list_directory
+directory_tree
+search_files
+get_file_info
+edit_file
+write_file
+list_allowed_directories
+```
+
+Recommended Claude prompt:
+
+```text
+Use filesystem to read PROJECT_STARTUP_GUIDE.md and summarize the startup order. Do not modify any files.
+```
+
+For edits, ask Claude to preview intent first:
+
+```text
+Use filesystem to inspect PROJECT_STARTUP_GUIDE.md and propose a documentation update. Show me the proposed change before editing.
+```
+
+### GitHub MCP
+
+GitHub MCP lets Claude Desktop inspect GitHub repositories, issues, and pull requests. This setup uses the official GitHub MCP Server Windows binary, not the deprecated npm GitHub server and not Docker.
+
+Installed binary:
+
+```text
+%LOCALAPPDATA%\GitHubMcpServer\github-mcp-server.exe
+```
+
+Current Claude config is intentionally conservative:
+
+```text
+read-only: true
+toolsets: repos, issues, pull_requests
+oauth scopes: public_repo, read:user, user:email
+```
+
+On first use, GitHub MCP may open a browser authorization flow. Complete that login in the browser, then retry the Claude request. The token is handled by the GitHub MCP server flow; do not paste GitHub tokens into chat.
+
+If the target repository is private, `public_repo` may not be enough. In that case, use a GitHub Personal Access Token or a broader OAuth scope, but store it outside Git-tracked files and outside chat.
+
+Verify GitHub MCP tools:
+
+```powershell
+$configPath = Join-Path $env:APPDATA "Claude\claude_desktop_config.json"
+npx -y @modelcontextprotocol/inspector --cli --config $configPath --server github --method tools/list
+```
+
+Example Claude prompts:
+
+```text
+Use github to inspect repository grgbibek/AI-Learn and summarize open issues or pull requests.
+```
+
+```text
+Use github to search code in grgbibek/AI-Learn for OpenTelemetry setup and summarize the relevant files.
+```
+
+```text
+Use github to review recent pull request context for grgbibek/AI-Learn. Do not create or modify anything.
+```
+
+### Tavily MCP
+
+Tavily MCP gives Claude Desktop current web search and extraction tools. It is useful for checking fast-moving AI docs, package guidance, framework comparisons, and official documentation.
+
+This setup uses Tavily's remote MCP through `mcp-remote`, so no Tavily API key is stored in `claude_desktop_config.json`:
+
+```text
+cmd /c npx -y mcp-remote https://mcp.tavily.com/mcp
+```
+
+On first use, the Tavily MCP may open a browser authorization flow. Complete the sign-in/authorization in the browser, then retry the Claude request.
+
+Verify Tavily MCP tools:
+
+```powershell
+$configPath = Join-Path $env:APPDATA "Claude\claude_desktop_config.json"
+npx -y @modelcontextprotocol/inspector --cli --config $configPath --server tavily --method tools/list
+```
+
+Expected tools include:
+
+```text
+tavily_search
+tavily_extract
+tavily_crawl
+tavily_map
+```
+
+Example Claude prompts:
+
+```text
+Use tavily to search for current OpenTelemetry .NET OTLP exporter guidance. Prefer official docs and summarize what applies to TaskFlow.
+```
+
+```text
+Use tavily to find current Semantic Kernel Agents .NET documentation and tell me whether our hand-rolled agent pipeline should be compared with it next.
+```
+
+```text
+Use tavily to compare Azure AI Search, Pinecone, Qdrant, and SQL Server vector search for a .NET RAG app.
+```
 
 ## Smoke Tests
 
