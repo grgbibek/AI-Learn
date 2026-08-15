@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Memory;
@@ -28,7 +29,10 @@ public static class AgentEndpoints
 
     public static IEndpointRouteBuilder MapAgentEndpoints(this IEndpointRouteBuilder routes)
     {
-        var group = routes.MapGroup("/api/agents").WithTags("Multi-Agent Orchestration");
+        var group = routes.MapGroup("/api/agents")
+            .WithTags("Multi-Agent Orchestration")
+            .RequireAuthorization(AuthPolicies.CanUseAgents)
+            .RequireRateLimiting(RateLimitPolicies.AgentPipeline);
 
         // Step 1 of 3: Planner Agent - breaks a feature request into concrete subtasks.
         group.MapPost("/plan-feature", async (

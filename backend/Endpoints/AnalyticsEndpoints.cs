@@ -9,7 +9,8 @@ public static class AnalyticsEndpoints
 {
     public static void MapAnalyticsEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/analytics");
+        var group = app.MapGroup("/api/analytics")
+            .RequireAuthorization(AuthPolicies.CanViewAnalytics);
 
         group.MapGet("/metrics", async (
             AppDbContext db,

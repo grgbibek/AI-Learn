@@ -10,7 +10,9 @@ public static class WorkItemEndpoints
 {
     public static IEndpointRouteBuilder MapWorkItemEndpoints(this IEndpointRouteBuilder routes)
     {
-        var group = routes.MapGroup("/api/workitems").WithTags("WorkItems");
+        var group = routes.MapGroup("/api/workitems")
+            .WithTags("WorkItems")
+            .RequireAuthorization(AuthPolicies.CanReadWorkItems);
 
         // GET all work items
         group.MapGet("/", async (AppDbContext db) =>
@@ -49,7 +51,7 @@ public static class WorkItemEndpoints
             cache.Remove(AppCacheKeys.AnalyticsMetrics);
 
             return Results.Created($"/api/workitems/{item.Id}", item);
-        });
+        }).RequireAuthorization(AuthPolicies.CanWriteWorkItems);
 
         // PUT update work item
         group.MapPut("/{id:int}", async (int id, [FromBody] UpdateWorkItemRequest req, AppDbContext db, IMemoryCache cache) =>
@@ -71,7 +73,7 @@ public static class WorkItemEndpoints
             await db.SaveChangesAsync();
             cache.Remove(AppCacheKeys.AnalyticsMetrics);
             return Results.Ok(item);
-        });
+        }).RequireAuthorization(AuthPolicies.CanWriteWorkItems);
 
         // DELETE work item
         group.MapDelete("/{id:int}", async (int id, AppDbContext db, IMemoryCache cache) =>
@@ -83,7 +85,7 @@ public static class WorkItemEndpoints
             await db.SaveChangesAsync();
             cache.Remove(AppCacheKeys.AnalyticsMetrics);
             return Results.NoContent();
-        });
+        }).RequireAuthorization(AuthPolicies.CanWriteWorkItems);
 
         return routes;
     }

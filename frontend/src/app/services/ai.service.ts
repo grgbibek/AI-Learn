@@ -1,5 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { AuthService } from './auth.service';
 import {
   SubtaskAnalysisResponse,
   WorkloadAssistantResponse,
@@ -15,6 +16,7 @@ export type KnowledgeBaseMode = 'sqlHybrid' | 'kernelMemory';
 })
 export class AiService {
   private http = inject(HttpClient);
+  private auth = inject(AuthService);
   private apiUrl = 'http://localhost:5198/api/ai';
 
   readonly loading = signal<boolean>(false);
@@ -149,9 +151,13 @@ export class AiService {
   }
 
   private async streamAsk(question: string, topK: number, signal: AbortSignal): Promise<void> {
+    const token = await this.auth.getAccessToken();
     const response = await fetch(`${this.ragUrl}/ask-stream`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
       body: JSON.stringify({ question, topK }),
       signal
     });

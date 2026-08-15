@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.KernelMemory;
 using TaskFlow.Api.Data;
 
@@ -10,7 +11,9 @@ public static class KernelMemoryRagEndpoints
 {
     public static IEndpointRouteBuilder MapKernelMemoryRagEndpoints(this IEndpointRouteBuilder routes)
     {
-        var group = routes.MapGroup("/api/rag/kernel-memory").WithTags("RAG Knowledge Base (Kernel Memory)");
+        var group = routes.MapGroup("/api/rag/kernel-memory")
+            .WithTags("RAG Knowledge Base (Kernel Memory)")
+            .RequireAuthorization(AuthPolicies.CanUseRag);
 
         group.MapPost("/ingest", async (
             [FromBody] IngestDocumentRequest request,
@@ -40,7 +43,9 @@ public static class KernelMemoryRagEndpoints
                 SuspiciousPhrases = suspiciousPhrases,
                 Sanitization = BuildSanitizationSummary(titleSanitization, contentSanitization)
             });
-        });
+        })
+        .RequireAuthorization(AuthPolicies.CanIngestKnowledge)
+        .RequireRateLimiting(RateLimitPolicies.KnowledgeIngest);
 
         group.MapPost("/ask", async (
             [FromBody] AskKernelMemoryRequest request,
@@ -79,7 +84,7 @@ public static class KernelMemoryRagEndpoints
                     })
                 })
             });
-        });
+        }).RequireRateLimiting(RateLimitPolicies.AiChat);
 
         return routes;
     }

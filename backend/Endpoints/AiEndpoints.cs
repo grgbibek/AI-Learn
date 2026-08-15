@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.SemanticKernel;
@@ -32,7 +33,10 @@ public static class AiEndpoints
 {
     public static IEndpointRouteBuilder MapAiEndpoints(this IEndpointRouteBuilder routes)
     {
-        var group = routes.MapGroup("/api/ai").WithTags("AI Features");
+        var group = routes.MapGroup("/api/ai")
+            .WithTags("AI Features")
+            .RequireAuthorization(AuthPolicies.CanUseAi)
+            .RequireRateLimiting(RateLimitPolicies.AiChat);
 
         // 1. Unstructured Endpoint (Lesson 1)
         group.MapPost("/suggest-subtasks/{id:int}", async (

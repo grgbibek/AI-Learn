@@ -1,6 +1,12 @@
+using System.Security.Claims;
+using System.Text;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.KernelMemory;
 using Microsoft.KernelMemory.AI;
 using Microsoft.KernelMemory.AI.Ollama;
@@ -20,6 +26,99 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddMemoryCache();
+
+var jwtOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>() ?? new JwtOptions();
+if (Encoding.UTF8.GetByteCount(jwtOptions.SigningKey) < 32)
+{
+    throw new InvalidOperationException("Jwt:SigningKey must be configured with at least 32 bytes.");
+}
+
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwtOptions.Audience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(1)
+        };
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(AuthPolicies.CanReadWorkItems, policy =>
+        policy.RequireAuthenticatedUser().RequireRole("User", "Admin"));
+    options.AddPolicy(AuthPolicies.CanWriteWorkItems, policy =>
+        policy.RequireAuthenticatedUser().RequireRole("Admin"));
+    options.AddPolicy(AuthPolicies.CanUseAi, policy =>
+        policy.RequireAuthenticatedUser().RequireRole("User", "Admin"));
+    options.AddPolicy(AuthPolicies.CanUseRag, policy =>
+        policy.RequireAuthenticatedUser().RequireRole("User", "Admin"));
+    options.AddPolicy(AuthPolicies.CanIngestKnowledge, policy =>
+        policy.RequireAuthenticatedUser().RequireRole("Admin"));
+    options.AddPolicy(AuthPolicies.CanUseAgents, policy =>
+        policy.RequireAuthenticatedUser().RequireRole("Admin"));
+    options.AddPolicy(AuthPolicies.CanViewAnalytics, policy =>
+        policy.RequireAuthenticatedUser().RequireRole("Admin"));
+});
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, ct) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        context.HttpContext.Response.ContentType = "application/problem+json";
+
+        await context.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            Type = "https://httpstatuses.com/429",
+            Title = "Too many requests.",
+            Status = StatusCodes.Status429TooManyRequests,
+            Detail = "The request limit for this AI capability has been exceeded. Try again after the current window resets."
+        }, cancellationToken: ct);
+    };
+
+    options.AddPolicy(RateLimitPolicies.AiChat, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            GetRateLimitPartitionKey(context),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 20,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+
+    options.AddPolicy(RateLimitPolicies.KnowledgeIngest, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            GetRateLimitPartitionKey(context),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(5),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+
+    options.AddPolicy(RateLimitPolicies.AgentPipeline, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            GetRateLimitPartitionKey(context),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 3,
+                Window = TimeSpan.FromMinutes(10),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+});
 
 // ─── OpenTelemetry Tracing (Phase 5 - Observability) ─────────────────────────
 // Traces every agent-pipeline call as a span (see AgentTelemetry.Source usage in
@@ -113,9 +212,11 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Apply pending EF Core Migrations (creates the database on first run)
-using (var scope = app.Services.CreateScope())
+// Apply pending EF Core Migrations (creates the database on first run). Integration tests
+// replace SQL Server with an in-memory provider, so they skip relational migrations.
+if (!builder.Configuration.GetValue<bool>("TaskFlow:SkipMigrations"))
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
 }
@@ -129,8 +230,12 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowAngularDev");
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseRateLimiter();
 
 // Map endpoints
+app.MapAuthEndpoints();
 app.MapWorkItemEndpoints();
 app.MapAiEndpoints();
 app.MapRagEndpoints();
@@ -140,3 +245,17 @@ app.MapAgentEndpoints();
 app.MapAnalyticsEndpoints();
 
 app.Run();
+
+static string GetRateLimitPartitionKey(HttpContext context)
+{
+    if (context.User.Identity?.IsAuthenticated == true)
+    {
+        return context.User.FindFirstValue(ClaimTypes.Name)
+            ?? context.User.Identity.Name
+            ?? "authenticated";
+    }
+
+    return context.Connection.RemoteIpAddress?.ToString() ?? "anonymous";
+}
+
+public partial class Program;

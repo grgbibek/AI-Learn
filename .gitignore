@@ -1,6 +1,8 @@
 # .NET
 backend/bin/
 backend/obj/
+backend.Tests/bin/
+backend.Tests/obj/
 mcp-server/bin/
 mcp-server/obj/
 *.user
@@ -16,3 +18,5 @@ frontend/.angular/
 # OS
 .DS_Store
 Thumbs.db
+
+tmp/

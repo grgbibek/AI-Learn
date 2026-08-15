@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.AI;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
@@ -17,7 +18,9 @@ public static class QdrantRagEndpoints
 
     public static IEndpointRouteBuilder MapQdrantRagEndpoints(this IEndpointRouteBuilder routes)
     {
-        var group = routes.MapGroup("/api/rag/qdrant").WithTags("RAG Knowledge Base (Qdrant)");
+        var group = routes.MapGroup("/api/rag/qdrant")
+            .WithTags("RAG Knowledge Base (Qdrant)")
+            .RequireAuthorization(AuthPolicies.CanUseRag);
 
         group.MapPost("/ingest", async (
             [FromBody] IngestDocumentRequest request,
@@ -60,7 +63,9 @@ public static class QdrantRagEndpoints
                 Store = "Qdrant",
                 Sanitization = BuildSanitizationSummary(titleSanitization, contentSanitization)
             });
-        });
+        })
+        .RequireAuthorization(AuthPolicies.CanIngestKnowledge)
+        .RequireRateLimiting(RateLimitPolicies.KnowledgeIngest);
 
         group.MapPost("/ask", async (
             [FromBody] AskKnowledgeBaseRequest request,
@@ -139,7 +144,7 @@ public static class QdrantRagEndpoints
                     VectorScore = Math.Round(x.Score, 4)
                 })
             });
-        });
+        }).RequireRateLimiting(RateLimitPolicies.AiChat);
 
         return routes;
     }
