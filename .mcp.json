@@ -1,0 +1,50 @@
+{
+  "mcpServers": {
+    "taskflow-workitems": {
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "C:\\Users\\bibekgurung\\Desktop\\Rapid\\Extras\\AI-Learn\\mcp-server\\mcp-server.csproj",
+        "--no-build"
+      ]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest"
+      ]
+    },
+    "filesystem": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "C:\\Users\\bibekgurung\\Desktop\\Rapid\\Extras\\AI-Learn"
+      ]
+    },
+    "github": {
+      "command": "C:\\Users\\bibekgurung\\AppData\\Local\\GitHubMcpServer\\github-mcp-server.exe",
+      "args": [
+        "stdio",
+        "--read-only",
+        "--oauth-scopes",
+        "public_repo,read:user,user:email",
+        "--toolsets",
+        "repos,issues,pull_requests"
+      ]
+    },
+    "tavily": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "mcp-remote",
+        "https://mcp.tavily.com/mcp"
+      ]
+    }
+  }
+}
