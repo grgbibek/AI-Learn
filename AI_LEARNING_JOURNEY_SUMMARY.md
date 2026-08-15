@@ -4,13 +4,13 @@ A retrospective of everything built and learned across the 5-phase AI Mastery Ro
 
 ## Current Status Snapshot
 
-As of 2026-08-15, the original roadmap is roughly **92% covered**. The strongest completed areas are .NET AI integration, structured outputs, native tool calling, RAG fundamentals, SQL Server native vector search, Qdrant comparison, Kernel Memory comparison, Angular streaming UX, multi-agent orchestration, MCP read/write tools, OpenTelemetry tracing with Aspire Dashboard visualization, prompt-injection guardrails, first-pass data sanitization, backend performance caching, JWT-backed authorization policies, Angular token propagation, first-pass rate limiting for expensive AI workloads, and integration tests for the new security controls.
+As of 2026-08-15, the original roadmap is roughly **93% covered**. The strongest completed areas are .NET AI integration, structured outputs, native tool calling, RAG fundamentals, SQL Server native vector search, Qdrant comparison, Kernel Memory comparison, Angular streaming UX, multi-agent orchestration, MCP read/write tools, OpenTelemetry tracing with Aspire Dashboard visualization, prompt-injection guardrails, first-pass data sanitization, backend performance caching, JWT-backed authorization policies, Angular token propagation, first-pass rate limiting for expensive AI workloads, integration tests for the new security controls, and a first GitHub Actions CI pipeline.
 
-The latest hardening update added JWT bearer authentication, capability-based authorization policies, a development-only token endpoint, Angular `HttpClient` interceptor support, explicit Bearer-token handling for the raw `fetch()` SSE stream, and ASP.NET Core rate limiting for AI/RAG/agent endpoints. Smoke tests verified anonymous requests are rejected, normal users can read but cannot write, admins can access protected analytics, and the agent-rate-limit policy returns `429 Too Many Requests` after the configured window is exhausted.
+The latest hardening update added JWT bearer authentication, capability-based authorization policies, a development-only token endpoint, Angular `HttpClient` interceptor support, explicit Bearer-token handling for the raw `fetch()` SSE stream, ASP.NET Core rate limiting for AI/RAG/agent endpoints, focused backend integration tests, and a GitHub Actions CI workflow. Smoke tests and integration tests verified anonymous requests are rejected, normal users can read but cannot write, admins can access protected analytics, and the agent-rate-limit policy returns `429 Too Many Requests` after the configured window is exhausted.
 
 The previous observability update added OTLP export for OpenTelemetry traces and verified visual tracing through the standalone Aspire Dashboard launched with the non-Docker Aspire CLI path. The backend now keeps console trace export as a fallback, exports to the Aspire Dashboard at `http://localhost:4317` when `OTEL_EXPORTER_OTLP_ENDPOINT` is configured, and includes stable HTTP client and SQL client instrumentation alongside the existing custom agent spans. A live check confirmed Aspire Dashboard at `http://localhost:18888` received traces for `GET /api/analytics/metrics` and `POST /api/agents/plan-feature`.
 
-The remaining work is now less about learning basic AI capabilities and more about production maturity: replacing the development token flow with a real identity provider, adding durable token/cost budgets beyond fixed-window request limits, broadening automated tests beyond the first security slice, CI/CD, policy-backed PII detection, stream-safe output sanitization, Semantic Kernel Agents / AutoGen .NET comparison, and managed search/vector-store comparisons such as Azure AI Search or Pinecone.
+The remaining work is now less about learning basic AI capabilities and more about production maturity: replacing the development token flow with a real identity provider, adding durable token/cost budgets beyond fixed-window request limits, broadening automated tests beyond the first security slice, adding deployment/CD, policy-backed PII detection, stream-safe output sanitization, Semantic Kernel Agents / AutoGen .NET comparison, and managed search/vector-store comparisons such as Azure AI Search or Pinecone.
 
 ```mermaid
 timeline
@@ -166,6 +166,7 @@ flowchart LR
 - **Rate limiting**: ASP.NET Core rate limiter policies now protect costly AI surfaces: `AiChat` allows 20 requests per minute, `KnowledgeIngest` allows 5 requests per 5 minutes, and `AgentPipeline` allows 3 requests per 10 minutes. Rejections return `429 Too Many Requests` with a small Problem Details-style JSON body.
 - **Verification**: smoke tests confirmed anonymous work-item reads return `401`, normal user reads return `200`, normal user writes return `403`, admin analytics returns `200`, and the fourth rapid request to the agent audit endpoint returns `429` under the `AgentPipeline` limiter.
 - **Automated security integration tests**: a new `backend.Tests` xUnit project uses `WebApplicationFactory<Program>` with EF Core InMemory and a test JWT configuration. It locks in the same security guarantees as executable tests: anonymous users get `401`, normal users can read but cannot write, admins can view analytics, agent endpoints return `429` after the configured limit, and the development token endpoint returns `404` outside Development.
+- **GitHub Actions CI**: a new `.github/workflows/ci.yml` pipeline runs on pushes and pull requests to `main`. It restores/builds the backend, runs the backend integration tests, installs frontend dependencies from `package-lock.json`, and builds the Angular app. The frontend lockfile was repaired so npm 10 / Node 22 CI can install Vite's nested `esbuild@0.25.12` optional binaries correctly.
 - **Key lesson**: authentication and authorization are not enough for AI apps. A valid user can still accidentally or maliciously create cost, latency, and model-pressure problems. Production AI endpoints need both identity checks and workload controls.
 
 ---
@@ -192,12 +193,12 @@ The detailed coverage audit is captured in `LEARNING_PLAN_COVERAGE_REPORT.md`. S
 
 | Area | Coverage | Current Assessment |
 |---|---:|---|
-| Phase 1: AI-assisted engineering | 95% | Complete for the learning project; CI-backed automation would be the next step. |
+| Phase 1: AI-assisted engineering | 97% | Complete for the learning project; CI now runs build/test checks, while PR review automation remains optional future depth. |
 | Phase 2: .NET AI engineering | 95% | Complete at the roadmap level; optional hosted-model comparisons remain. |
 | Phase 3: RAG and vector databases | 85% | Strong fundamentals, Qdrant, and Kernel Memory comparison complete; managed search products and formal evaluation remain. |
 | Phase 4: Angular streaming AI UX | 90% | Streaming, cancellation, Markdown, optimistic UI, and analytics are built; Transformers.js verification remains environment-dependent. |
 | Phase 5: agents and MCP | 80% | Hand-rolled agents, MCP tools, tracing, guardrails, and data sanitization are built; SK Agents / AutoGen comparison remains. |
-| Production readiness | 68% | AuthZ policies, dev JWT flow, Angular token propagation, rate limiting, focused security integration tests, performance caching, and visual trace tooling now exist; biggest remaining gaps are real identity-provider integration, durable AI budgets, broader tests, CI/CD, policy-grade privacy, and operational controls. |
+| Production readiness | 72% | AuthZ policies, dev JWT flow, Angular token propagation, rate limiting, focused security integration tests, GitHub Actions CI, performance caching, and visual trace tooling now exist; biggest remaining gaps are real identity-provider integration, durable AI budgets, broader tests, deployment/CD, policy-grade privacy, and operational controls. |
 
 ---
 
@@ -223,6 +224,6 @@ Honest audit against the original roadmap - only things still intentionally defe
 - **Partial performance caching only** - analytics and embeddings now use in-memory caching, but there is no distributed cache, cache metrics endpoint, or cross-instance cache invalidation strategy.
 - **Observability is still local/dev-oriented** - OpenTelemetry now exports to Aspire Dashboard over OTLP, but there is no production telemetry backend such as Application Insights, Grafana Tempo, or a managed collector.
 - **Automated test coverage is still narrow** - the first backend integration tests now cover auth, authorization, rate limiting, and dev-token environment behavior, but RAG retrieval, streaming cancellation, MCP tools, sanitization, and frontend behavior still need coverage.
-- **No CI/CD pipeline.**
+- **CI exists, but CD does not** - GitHub Actions now runs backend build/tests and frontend build, but there is no deployment pipeline, environment promotion, release artifact publishing, or production secret/configuration strategy.
 - **No policy-backed PII classifier** - current sanitization is intentionally lightweight regex/Luhn detection, not a full compliance-grade privacy layer.
 - **No robust streaming output sanitizer** - streaming output currently applies best-effort token-level redaction, but sensitive values can cross token boundaries and require a buffered/windowed sanitizer.

@@ -1,6 +1,6 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { from, switchMap } from 'rxjs';
+import { catchError, from, switchMap, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
@@ -9,11 +9,24 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   }
 
   const auth = inject(AuthService);
+  const withBearerToken = (token: string) => req.clone({
+    setHeaders: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
   return from(auth.getAccessToken()).pipe(
-    switchMap(token => next(req.clone({
-      setHeaders: {
-        Authorization: `Bearer ${token}`
-      }
-    })))
+    switchMap(token => next(withBearerToken(token)).pipe(
+      catchError(error => {
+        if (error.status !== 401) {
+          return throwError(() => error);
+        }
+
+        auth.clearToken();
+        return from(auth.getAccessToken()).pipe(
+          switchMap(refreshedToken => next(withBearerToken(refreshedToken)))
+        );
+      })
+    ))
   );
 };
