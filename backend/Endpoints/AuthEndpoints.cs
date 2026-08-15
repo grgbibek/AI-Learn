@@ -13,7 +13,7 @@ namespace TaskFlow.Api.Endpoints;
 
 public record DevTokenRequest(string? UserName, string? Role);
 public record LoginRequest(string UserName, string Password);
-public record AuthResponse(string AccessToken, string TokenType, DateTime ExpiresAt, string UserName, string Role, int DailyAiRequestLimit);
+public record AuthResponse(string AccessToken, string TokenType, DateTime ExpiresAt, string UserName, string Role, int DailyAiRequestLimit, int DailyAiTokenLimit);
 
 public static class AuthEndpoints
 {
@@ -49,7 +49,7 @@ public static class AuthEndpoints
                 return Results.Unauthorized();
             }
 
-            return Results.Ok(CreateAuthResponse(user.UserName, user.Email, user.Role, user.DailyAiRequestLimit, options.Value));
+            return Results.Ok(CreateAuthResponse(user.UserName, user.Email, user.Role, user.DailyAiRequestLimit, user.DailyAiTokenLimit, options.Value));
         });
 
         group.MapPost("/dev-token", (DevTokenRequest request, IOptions<JwtOptions> options, IWebHostEnvironment environment) =>
@@ -68,14 +68,15 @@ public static class AuthEndpoints
             var userName = string.IsNullOrWhiteSpace(request.UserName) ? "local-admin" : request.UserName.Trim();
             var role = string.Equals(request.Role, "User", StringComparison.OrdinalIgnoreCase) ? "User" : "Admin";
             var dailyLimit = role == AppRoles.Admin ? 500 : 100;
+            var dailyTokenLimit = role == AppRoles.Admin ? 500_000 : 100_000;
 
-            return Results.Ok(CreateAuthResponse(userName, $"{userName}@dev.local", role, dailyLimit, jwt));
+            return Results.Ok(CreateAuthResponse(userName, $"{userName}@dev.local", role, dailyLimit, dailyTokenLimit, jwt));
         });
 
         return routes;
     }
 
-    private static AuthResponse CreateAuthResponse(string userName, string email, string role, int dailyAiRequestLimit, JwtOptions jwt)
+    private static AuthResponse CreateAuthResponse(string userName, string email, string role, int dailyAiRequestLimit, int dailyAiTokenLimit, JwtOptions jwt)
     {
         var expires = DateTime.UtcNow.AddMinutes(jwt.ExpirationMinutes);
         var claims = new[]
@@ -85,7 +86,8 @@ public static class AuthEndpoints
             new Claim(ClaimTypes.Name, userName),
             new Claim(ClaimTypes.Email, email),
             new Claim(ClaimTypes.Role, role),
-            new Claim("daily_ai_request_limit", dailyAiRequestLimit.ToString())
+            new Claim("daily_ai_request_limit", dailyAiRequestLimit.ToString()),
+            new Claim("daily_ai_token_limit", dailyAiTokenLimit.ToString())
         };
 
         var credentials = new SigningCredentials(
@@ -105,6 +107,7 @@ public static class AuthEndpoints
             expires,
             userName,
             role,
-            dailyAiRequestLimit);
+            dailyAiRequestLimit,
+            dailyAiTokenLimit);
     }
 }

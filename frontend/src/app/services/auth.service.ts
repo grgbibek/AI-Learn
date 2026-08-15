@@ -7,6 +7,7 @@ export interface AuthSession {
   userName: string;
   role: string;
   dailyAiRequestLimit: number;
+  dailyAiTokenLimit: number;
 }
 
 @Injectable({

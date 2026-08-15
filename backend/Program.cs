@@ -290,6 +290,7 @@ static async Task SeedInitialAdminAsync(IServiceProvider services, IConfiguratio
         PasswordHash = string.Empty,
         Role = AppRoles.Admin,
         DailyAiRequestLimit = seedAdmin.DailyAiRequestLimit,
+        DailyAiTokenLimit = seedAdmin.DailyAiTokenLimit,
         IsActive = true,
         CreatedAt = DateTime.UtcNow
     };

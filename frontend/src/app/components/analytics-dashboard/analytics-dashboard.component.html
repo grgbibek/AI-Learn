@@ -66,6 +66,90 @@
         </span>
         <span class="stat-sub">Zero-latency In-Browser</span>
       </div>
+
+      <div class="stat-card">
+        <span class="stat-label">AI Requests Today</span>
+        <span class="stat-value highlight">{{ m.aiUsage.requestsToday }}</span>
+        <span class="stat-sub">{{ m.aiUsage.uniqueUsersToday }} active user(s)</span>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Budget Blocks Today</span>
+        <span class="stat-value danger">{{ m.aiUsage.budgetExceededToday }}</span>
+        <span class="stat-sub">Daily usage budget denials</span>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Estimated Tokens Today</span>
+        <span class="stat-value info">{{ m.aiUsage.estimatedTokensToday }}</span>
+        <span class="stat-sub">Request-side estimate</span>
+      </div>
+
+      <div class="stat-card">
+        <span class="stat-label">Estimated AI Cost</span>
+        <span class="stat-value success">${{ m.aiUsage.estimatedCostUsdToday }}</span>
+        <span class="stat-sub">Configured estimate</span>
+      </div>
+    </div>
+
+    <div class="usage-grid">
+      <div class="usage-card">
+        <h4>AI Usage by Capability</h4>
+        @if (m.aiUsage.byCapability.length === 0) {
+          <p class="empty-state">No AI usage has been logged today.</p>
+        } @else {
+          <table>
+            <thead>
+              <tr>
+                <th>Capability</th>
+                <th>Requests</th>
+                <th>Blocked</th>
+                <th>Tokens</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of m.aiUsage.byCapability; track item.capability) {
+                <tr>
+                  <td>{{ item.capability }}</td>
+                  <td>{{ item.requests }}</td>
+                  <td>{{ item.budgetExceeded }}</td>
+                  <td>{{ item.estimatedTokens }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+
+      <div class="usage-card">
+        <h4>Top AI Users Today</h4>
+        @if (m.aiUsage.topUsers.length === 0) {
+          <p class="empty-state">No user-level AI usage has been logged today.</p>
+        } @else {
+          <table>
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Role</th>
+                <th>Requests</th>
+                <th>Blocked</th>
+                <th>Tokens</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (user of m.aiUsage.topUsers; track user.userName) {
+                <tr>
+                  <td>{{ user.userName }}</td>
+                  <td>{{ user.role }}</td>
+                  <td>{{ user.requests }}</td>
+                  <td>{{ user.budgetExceeded }}</td>
+                  <td>{{ user.estimatedTokens }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
     </div>
 
     <!-- Dynamic Charts Section -->

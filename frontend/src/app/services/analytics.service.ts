@@ -26,6 +26,33 @@ export interface KnowledgeBaseMetrics {
   totalChunks: number;
 }
 
+export interface AiUsageByCapability {
+  capability: string;
+  requests: number;
+  budgetExceeded: number;
+  estimatedTokens: number;
+  estimatedCostUsd: number;
+}
+
+export interface AiUsageByUser {
+  userName: string;
+  role: string;
+  requests: number;
+  budgetExceeded: number;
+  estimatedTokens: number;
+  estimatedCostUsd: number;
+}
+
+export interface AiUsageMetrics {
+  requestsToday: number;
+  budgetExceededToday: number;
+  estimatedTokensToday: number;
+  estimatedCostUsdToday: number;
+  uniqueUsersToday: number;
+  byCapability: AiUsageByCapability[];
+  topUsers: AiUsageByUser[];
+}
+
 export interface AnalyticsMetrics {
   totalWorkItems: number;
   completedWorkItems: number;
@@ -35,6 +62,7 @@ export interface AnalyticsMetrics {
   priorityDistribution: PriorityDistribution;
   agentMetrics: AgentPipelineMetrics;
   knowledgeBaseMetrics: KnowledgeBaseMetrics;
+  aiUsage: AiUsageMetrics;
 }
 
 @Injectable({

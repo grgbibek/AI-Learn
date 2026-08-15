@@ -42,6 +42,52 @@ public static class AnalyticsEndpoints
                     .Distinct()
                     .CountAsync(ct);
 
+                var today = DateTime.UtcNow.Date;
+                var aiUsageToday = db.AiUsageLogs.Where(log => log.StartedAt >= today);
+                var aiRequestsToday = await aiUsageToday.CountAsync(ct);
+                var aiBudgetExceededToday = await aiUsageToday.CountAsync(log => log.BudgetWasExceeded, ct);
+                var aiEstimatedTokensToday = await aiUsageToday.SumAsync(log => (int?)log.EstimatedTotalTokens, ct) ?? 0;
+                var aiEstimatedCostToday = await aiUsageToday.SumAsync(log => (decimal?)log.EstimatedCostUsd, ct) ?? 0m;
+                var aiUniqueUsersToday = await aiUsageToday
+                    .Select(log => log.UserName)
+                    .Distinct()
+                    .CountAsync(ct);
+
+                var aiUsageByCapabilityRows = await aiUsageToday
+                    .GroupBy(log => log.Capability)
+                    .Select(group => new
+                    {
+                        Capability = group.Key,
+                        Requests = group.Count(),
+                        BudgetExceeded = group.Count(log => log.BudgetWasExceeded),
+                        EstimatedTokens = group.Sum(log => log.EstimatedTotalTokens),
+                        EstimatedCostUsd = group.Sum(log => log.EstimatedCostUsd)
+                    })
+                    .OrderByDescending(item => item.Requests)
+                    .ToListAsync(ct);
+                var aiUsageByCapability = aiUsageByCapabilityRows
+                    .Select(item => new AiUsageByCapability(item.Capability, item.Requests, item.BudgetExceeded, item.EstimatedTokens, Math.Round(item.EstimatedCostUsd, 6)))
+                    .ToList();
+
+                var aiTopUserRows = await aiUsageToday
+                    .GroupBy(log => new { log.UserName, log.Role })
+                    .Select(group => new
+                    {
+                        group.Key.UserName,
+                        group.Key.Role,
+                        Requests = group.Count(),
+                        BudgetExceeded = group.Count(log => log.BudgetWasExceeded),
+                        EstimatedTokens = group.Sum(log => log.EstimatedTotalTokens),
+                        EstimatedCostUsd = group.Sum(log => log.EstimatedCostUsd)
+                    })
+                    .OrderByDescending(item => item.Requests)
+                    .ThenBy(item => item.UserName)
+                    .Take(5)
+                    .ToListAsync(ct);
+                var aiTopUsers = aiTopUserRows
+                    .Select(item => new AiUsageByUser(item.UserName, item.Role, item.Requests, item.BudgetExceeded, item.EstimatedTokens, Math.Round(item.EstimatedCostUsd, 6)))
+                    .ToList();
+
                 var completionRate = totalTasks > 0 ? (double)doneCount / totalTasks * 100 : 0.0;
 
                 return new AnalyticsMetricsResponse(
@@ -73,6 +119,16 @@ public static class AnalyticsEndpoints
                     KnowledgeBaseMetrics: new KnowledgeBaseMetrics(
                         TotalDocuments: totalDocuments,
                         TotalChunks: totalChunks
+                    ),
+
+                    AiUsage: new AiUsageMetrics(
+                        RequestsToday: aiRequestsToday,
+                        BudgetExceededToday: aiBudgetExceededToday,
+                        EstimatedTokensToday: aiEstimatedTokensToday,
+                        EstimatedCostUsdToday: Math.Round(aiEstimatedCostToday, 6),
+                        UniqueUsersToday: aiUniqueUsersToday,
+                        ByCapability: aiUsageByCapability,
+                        TopUsers: aiTopUsers
                     )
                 );
             });
@@ -87,6 +143,16 @@ public record StatusDistribution(int Todo, int InProgress, int Done);
 public record PriorityDistribution(int Low, int Medium, int High, int Critical);
 public record AgentPipelineMetrics(int TotalRuns, int ApprovedRuns, int RejectedRuns, double ApprovalRate);
 public record KnowledgeBaseMetrics(int TotalDocuments, int TotalChunks);
+public record AiUsageByCapability(string Capability, int Requests, int BudgetExceeded, int EstimatedTokens, decimal EstimatedCostUsd);
+public record AiUsageByUser(string UserName, string Role, int Requests, int BudgetExceeded, int EstimatedTokens, decimal EstimatedCostUsd);
+public record AiUsageMetrics(
+    int RequestsToday,
+    int BudgetExceededToday,
+    int EstimatedTokensToday,
+    decimal EstimatedCostUsdToday,
+    int UniqueUsersToday,
+    List<AiUsageByCapability> ByCapability,
+    List<AiUsageByUser> TopUsers);
 
 public record AnalyticsMetricsResponse(
     int TotalWorkItems,
@@ -96,5 +162,6 @@ public record AnalyticsMetricsResponse(
     StatusDistribution StatusDistribution,
     PriorityDistribution PriorityDistribution,
     AgentPipelineMetrics AgentMetrics,
-    KnowledgeBaseMetrics KnowledgeBaseMetrics
+    KnowledgeBaseMetrics KnowledgeBaseMetrics,
+    AiUsageMetrics AiUsage
 );

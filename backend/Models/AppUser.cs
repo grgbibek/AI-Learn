@@ -21,6 +21,7 @@ public class AppUser
     public required string PasswordHash { get; set; }
     public required string Role { get; set; } = AppRoles.User;
     public int DailyAiRequestLimit { get; set; } = 100;
+    public int DailyAiTokenLimit { get; set; } = 100_000;
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }

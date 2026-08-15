@@ -20,18 +20,22 @@ public sealed class TaskFlowApiFactory : WebApplicationFactory<Program>
     private readonly string environmentName;
     private readonly int userDailyRequestLimit;
     private readonly int adminDailyRequestLimit;
+    private readonly int userDailyTokenLimit;
+    private readonly int adminDailyTokenLimit;
     private readonly string databaseName = $"TaskFlowTests-{Guid.NewGuid():N}";
 
     public TaskFlowApiFactory()
-        : this("Development", userDailyRequestLimit: 100, adminDailyRequestLimit: 500)
+        : this("Development", userDailyRequestLimit: 100, adminDailyRequestLimit: 500, userDailyTokenLimit: 100_000, adminDailyTokenLimit: 500_000)
     {
     }
 
-    private TaskFlowApiFactory(string environmentName, int userDailyRequestLimit, int adminDailyRequestLimit)
+    private TaskFlowApiFactory(string environmentName, int userDailyRequestLimit, int adminDailyRequestLimit, int userDailyTokenLimit, int adminDailyTokenLimit)
     {
         this.environmentName = environmentName;
         this.userDailyRequestLimit = userDailyRequestLimit;
         this.adminDailyRequestLimit = adminDailyRequestLimit;
+        this.userDailyTokenLimit = userDailyTokenLimit;
+        this.adminDailyTokenLimit = adminDailyTokenLimit;
         Environment.SetEnvironmentVariable("TaskFlow__SkipMigrations", "true");
         Environment.SetEnvironmentVariable("Jwt__Issuer", TestIssuer);
         Environment.SetEnvironmentVariable("Jwt__Audience", TestAudience);
@@ -40,10 +44,13 @@ public sealed class TaskFlowApiFactory : WebApplicationFactory<Program>
     }
 
     public static TaskFlowApiFactory ForEnvironment(string environmentName) =>
-        new(environmentName, userDailyRequestLimit: 100, adminDailyRequestLimit: 500);
+        new(environmentName, userDailyRequestLimit: 100, adminDailyRequestLimit: 500, userDailyTokenLimit: 100_000, adminDailyTokenLimit: 500_000);
 
     public static TaskFlowApiFactory ForBudgets(int userDailyRequestLimit, int adminDailyRequestLimit) =>
-        new("Development", userDailyRequestLimit, adminDailyRequestLimit);
+        new("Development", userDailyRequestLimit, adminDailyRequestLimit, userDailyTokenLimit: 100_000, adminDailyTokenLimit: 500_000);
+
+    public static TaskFlowApiFactory ForTokenBudgets(int userDailyTokenLimit, int adminDailyTokenLimit) =>
+        new("Development", userDailyRequestLimit: 100, adminDailyRequestLimit: 500, userDailyTokenLimit, adminDailyTokenLimit);
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -59,7 +66,9 @@ public sealed class TaskFlowApiFactory : WebApplicationFactory<Program>
                 ["Jwt:ExpirationMinutes"] = "30",
                 ["AiUsageBudget:Enabled"] = "true",
                 ["AiUsageBudget:UserDailyRequestLimit"] = userDailyRequestLimit.ToString(),
-                ["AiUsageBudget:AdminDailyRequestLimit"] = adminDailyRequestLimit.ToString()
+                ["AiUsageBudget:AdminDailyRequestLimit"] = adminDailyRequestLimit.ToString(),
+                ["AiUsageBudget:UserDailyTokenLimit"] = userDailyTokenLimit.ToString(),
+                ["AiUsageBudget:AdminDailyTokenLimit"] = adminDailyTokenLimit.ToString()
             });
         });
 
@@ -75,6 +84,8 @@ public sealed class TaskFlowApiFactory : WebApplicationFactory<Program>
                 options.Enabled = true;
                 options.UserDailyRequestLimit = userDailyRequestLimit;
                 options.AdminDailyRequestLimit = adminDailyRequestLimit;
+                options.UserDailyTokenLimit = userDailyTokenLimit;
+                options.AdminDailyTokenLimit = adminDailyTokenLimit;
             });
         });
     }

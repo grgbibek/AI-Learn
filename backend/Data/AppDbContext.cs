@@ -18,6 +18,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<AiUsageLog>()
             .HasIndex(log => new { log.UserName, log.StartedAt });
 
+        modelBuilder.Entity<AiUsageLog>()
+            .Property(log => log.EstimatedCostUsd)
+            .HasPrecision(18, 6);
+
         modelBuilder.Entity<AppUser>()
             .HasIndex(user => user.UserName)
             .IsUnique();

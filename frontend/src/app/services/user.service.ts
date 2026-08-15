@@ -7,9 +7,19 @@ export interface AppUser {
   email: string;
   role: 'User' | 'Admin';
   dailyAiRequestLimit: number;
+  dailyAiTokenLimit: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string | null;
+  usageToday: UserUsageToday;
+}
+
+export interface UserUsageToday {
+  requestsUsed: number;
+  requestLimit: number;
+  tokensUsed: number;
+  tokenLimit: number;
+  budgetBlocks: number;
 }
 
 export interface CreateUserRequest {
@@ -18,6 +28,7 @@ export interface CreateUserRequest {
   password: string;
   role: 'User' | 'Admin';
   dailyAiRequestLimit: number;
+  dailyAiTokenLimit: number;
   isActive: boolean;
 }
 
@@ -26,6 +37,7 @@ export interface UpdateUserRequest {
   password?: string | null;
   role: 'User' | 'Admin';
   dailyAiRequestLimit: number;
+  dailyAiTokenLimit: number;
   isActive: boolean;
 }
 
