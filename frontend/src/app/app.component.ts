@@ -1,10 +1,13 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { TaskBoardComponent } from './components/task-board/task-board.component';
 import { KnowledgeBaseComponent } from './components/knowledge-base/knowledge-base.component';
 import { AgentPipelineComponent } from './components/agent-pipeline/agent-pipeline.component';
 import { AnalyticsDashboardComponent } from './components/analytics-dashboard/analytics-dashboard.component';
+import { LoginComponent } from './components/login/login.component';
+import { UserManagementComponent } from './components/user-management/user-management.component';
+import { AuthService } from './services/auth.service';
 
-export type ActiveTab = 'board' | 'analytics' | 'rag' | 'agent' | 'all';
+export type ActiveTab = 'board' | 'analytics' | 'rag' | 'agent' | 'users' | 'all';
 
 @Component({
   selector: 'app-root',
@@ -13,10 +16,15 @@ export type ActiveTab = 'board' | 'analytics' | 'rag' | 'agent' | 'all';
     TaskBoardComponent,
     KnowledgeBaseComponent,
     AgentPipelineComponent,
-    AnalyticsDashboardComponent
+    AnalyticsDashboardComponent,
+    LoginComponent,
+    UserManagementComponent
   ],
   template: `
-    <div class="app-shell">
+    @if (!auth.isAuthenticated()) {
+      <app-login></app-login>
+    } @else {
+      <div class="app-shell">
       <header class="navbar">
         <div class="nav-content">
           <div class="brand">
@@ -49,6 +57,14 @@ export type ActiveTab = 'board' | 'analytics' | 'rag' | 'agent' | 'all';
               class="tab-btn">
               🤖 Multi-Agent
             </button>
+            @if (auth.isAdmin()) {
+              <button
+                [class.active]="activeTab() === 'users'"
+                (click)="activeTab.set('users')"
+                class="tab-btn">
+                👥 Users
+              </button>
+            }
             <button 
               [class.active]="activeTab() === 'all'" 
               (click)="activeTab.set('all')" 
@@ -67,6 +83,12 @@ export type ActiveTab = 'board' | 'analytics' | 'rag' | 'agent' | 'all';
           </div>
 
           <p class="subtitle">Phase 4 — Streaming AI UI &amp; Analytics</p>
+
+          <div class="session-chip">
+            <span>{{ auth.session()?.userName }}</span>
+            <strong>{{ auth.session()?.role }}</strong>
+            <button type="button" (click)="logout()">Logout</button>
+          </div>
         </div>
       </header>
 
@@ -87,14 +109,22 @@ export type ActiveTab = 'board' | 'analytics' | 'rag' | 'agent' | 'all';
           <app-agent-pipeline></app-agent-pipeline>
         }
 
+        @if (activeTab() === 'users' && auth.isAdmin()) {
+          <app-user-management></app-user-management>
+        }
+
         @if (activeTab() === 'all') {
           <app-analytics-dashboard></app-analytics-dashboard>
           <app-task-board></app-task-board>
           <app-knowledge-base></app-knowledge-base>
           <app-agent-pipeline></app-agent-pipeline>
+          @if (auth.isAdmin()) {
+            <app-user-management></app-user-management>
+          }
         }
       </main>
     </div>
+    }
   `,
   styles: [`
     .app-shell {
@@ -199,6 +229,29 @@ export type ActiveTab = 'board' | 'analytics' | 'rag' | 'agent' | 'all';
       font-size: 0.8rem;
       margin: 0;
     }
+    .session-chip {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #cbd5e1;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 0.35rem 0.5rem;
+      font-size: 0.8rem;
+    }
+    .session-chip strong {
+      color: #93c5fd;
+    }
+    .session-chip button {
+      border: 0;
+      border-radius: 6px;
+      background: #334155;
+      color: #f8fafc;
+      padding: 0.3rem 0.55rem;
+      cursor: pointer;
+      font-weight: 700;
+    }
     .main-content {
       max-width: 1200px;
       margin: 0 auto;
@@ -207,5 +260,11 @@ export type ActiveTab = 'board' | 'analytics' | 'rag' | 'agent' | 'all';
   `]
 })
 export class AppComponent {
+  protected readonly auth = inject(AuthService);
   readonly activeTab = signal<ActiveTab>('board');
+
+  logout(): void {
+    this.auth.logout();
+    this.activeTab.set('board');
+  }
 }

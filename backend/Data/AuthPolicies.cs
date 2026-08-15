@@ -9,4 +9,5 @@ public static class AuthPolicies
     public const string CanIngestKnowledge = nameof(CanIngestKnowledge);
     public const string CanUseAgents = nameof(CanUseAgents);
     public const string CanViewAnalytics = nameof(CanViewAnalytics);
+    public const string CanManageUsers = nameof(CanManageUsers);
 }

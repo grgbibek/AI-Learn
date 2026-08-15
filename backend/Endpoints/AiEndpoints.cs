@@ -36,7 +36,8 @@ public static class AiEndpoints
         var group = routes.MapGroup("/api/ai")
             .WithTags("AI Features")
             .RequireAuthorization(AuthPolicies.CanUseAi)
-            .RequireRateLimiting(RateLimitPolicies.AiChat);
+            .RequireRateLimiting(RateLimitPolicies.AiChat)
+            .AddEndpointFilter(new AiUsageBudgetFilter(RateLimitPolicies.AiChat));
 
         // 1. Unstructured Endpoint (Lesson 1)
         group.MapPost("/suggest-subtasks/{id:int}", async (

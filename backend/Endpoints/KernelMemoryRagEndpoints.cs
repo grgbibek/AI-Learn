@@ -45,7 +45,8 @@ public static class KernelMemoryRagEndpoints
             });
         })
         .RequireAuthorization(AuthPolicies.CanIngestKnowledge)
-        .RequireRateLimiting(RateLimitPolicies.KnowledgeIngest);
+        .RequireRateLimiting(RateLimitPolicies.KnowledgeIngest)
+        .AddEndpointFilter(new AiUsageBudgetFilter(RateLimitPolicies.KnowledgeIngest));
 
         group.MapPost("/ask", async (
             [FromBody] AskKernelMemoryRequest request,
@@ -84,7 +85,8 @@ public static class KernelMemoryRagEndpoints
                     })
                 })
             });
-        }).RequireRateLimiting(RateLimitPolicies.AiChat);
+        }).RequireRateLimiting(RateLimitPolicies.AiChat)
+        .AddEndpointFilter(new AiUsageBudgetFilter(RateLimitPolicies.AiChat));
 
         return routes;
     }

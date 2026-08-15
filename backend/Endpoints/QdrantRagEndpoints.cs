@@ -65,7 +65,8 @@ public static class QdrantRagEndpoints
             });
         })
         .RequireAuthorization(AuthPolicies.CanIngestKnowledge)
-        .RequireRateLimiting(RateLimitPolicies.KnowledgeIngest);
+        .RequireRateLimiting(RateLimitPolicies.KnowledgeIngest)
+        .AddEndpointFilter(new AiUsageBudgetFilter(RateLimitPolicies.KnowledgeIngest));
 
         group.MapPost("/ask", async (
             [FromBody] AskKnowledgeBaseRequest request,
@@ -144,7 +145,8 @@ public static class QdrantRagEndpoints
                     VectorScore = Math.Round(x.Score, 4)
                 })
             });
-        }).RequireRateLimiting(RateLimitPolicies.AiChat);
+        }).RequireRateLimiting(RateLimitPolicies.AiChat)
+        .AddEndpointFilter(new AiUsageBudgetFilter(RateLimitPolicies.AiChat));
 
         return routes;
     }

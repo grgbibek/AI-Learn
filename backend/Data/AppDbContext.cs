@@ -8,10 +8,23 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<WorkItem> WorkItems => Set<WorkItem>();
     public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
     public DbSet<AgentAuditLog> AgentAuditLogs => Set<AgentAuditLog>();
+    public DbSet<AiUsageLog> AiUsageLogs => Set<AiUsageLog>();
+    public DbSet<AppUser> AppUsers => Set<AppUser>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<AiUsageLog>()
+            .HasIndex(log => new { log.UserName, log.StartedAt });
+
+        modelBuilder.Entity<AppUser>()
+            .HasIndex(user => user.UserName)
+            .IsUnique();
+
+        modelBuilder.Entity<AppUser>()
+            .HasIndex(user => user.Email)
+            .IsUnique();
 
         // SQL Server 2025 native `vector` column (EF Core 10+) - nomic-embed-text produces 768-dim
         // embeddings. Similarity search runs via EF.Functions.VectorDistance() inside SQL Server

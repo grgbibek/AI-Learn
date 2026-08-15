@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using TaskFlow.Api.Data;
 
 namespace Backend.Tests;
@@ -17,15 +18,20 @@ public sealed class TaskFlowApiFactory : WebApplicationFactory<Program>
     private const string TestSigningKey = "integration-test-only-taskflow-jwt-signing-key";
 
     private readonly string environmentName;
+    private readonly int userDailyRequestLimit;
+    private readonly int adminDailyRequestLimit;
+    private readonly string databaseName = $"TaskFlowTests-{Guid.NewGuid():N}";
 
     public TaskFlowApiFactory()
-        : this("Development")
+        : this("Development", userDailyRequestLimit: 100, adminDailyRequestLimit: 500)
     {
     }
 
-    private TaskFlowApiFactory(string environmentName)
+    private TaskFlowApiFactory(string environmentName, int userDailyRequestLimit, int adminDailyRequestLimit)
     {
         this.environmentName = environmentName;
+        this.userDailyRequestLimit = userDailyRequestLimit;
+        this.adminDailyRequestLimit = adminDailyRequestLimit;
         Environment.SetEnvironmentVariable("TaskFlow__SkipMigrations", "true");
         Environment.SetEnvironmentVariable("Jwt__Issuer", TestIssuer);
         Environment.SetEnvironmentVariable("Jwt__Audience", TestAudience);
@@ -33,7 +39,11 @@ public sealed class TaskFlowApiFactory : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable("Jwt__ExpirationMinutes", "30");
     }
 
-    public static TaskFlowApiFactory ForEnvironment(string environmentName) => new(environmentName);
+    public static TaskFlowApiFactory ForEnvironment(string environmentName) =>
+        new(environmentName, userDailyRequestLimit: 100, adminDailyRequestLimit: 500);
+
+    public static TaskFlowApiFactory ForBudgets(int userDailyRequestLimit, int adminDailyRequestLimit) =>
+        new("Development", userDailyRequestLimit, adminDailyRequestLimit);
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -46,7 +56,10 @@ public sealed class TaskFlowApiFactory : WebApplicationFactory<Program>
                 ["Jwt:Issuer"] = TestIssuer,
                 ["Jwt:Audience"] = TestAudience,
                 ["Jwt:SigningKey"] = TestSigningKey,
-                ["Jwt:ExpirationMinutes"] = "30"
+                ["Jwt:ExpirationMinutes"] = "30",
+                ["AiUsageBudget:Enabled"] = "true",
+                ["AiUsageBudget:UserDailyRequestLimit"] = userDailyRequestLimit.ToString(),
+                ["AiUsageBudget:AdminDailyRequestLimit"] = adminDailyRequestLimit.ToString()
             });
         });
 
@@ -55,7 +68,14 @@ public sealed class TaskFlowApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
             services.RemoveAll<DbContextOptions<AppDbContext>>();
             services.AddDbContext<AppDbContext>(options =>
-                options.UseInMemoryDatabase($"TaskFlowTests-{Guid.NewGuid():N}"));
+                options.UseInMemoryDatabase(databaseName));
+
+            services.PostConfigure<AiUsageBudgetOptions>(options =>
+            {
+                options.Enabled = true;
+                options.UserDailyRequestLimit = userDailyRequestLimit;
+                options.AdminDailyRequestLimit = adminDailyRequestLimit;
+            });
         });
     }
 }

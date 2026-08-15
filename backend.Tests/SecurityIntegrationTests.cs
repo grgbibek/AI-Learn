@@ -2,6 +2,9 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using TaskFlow.Api.Data;
 
 namespace Backend.Tests;
 
@@ -68,6 +71,75 @@ public sealed class SecurityIntegrationTests : IClassFixture<TaskFlowApiFactory>
         }
 
         Assert.Equal([HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.TooManyRequests], statuses);
+    }
+
+    [Fact]
+    public async Task AgentEndpointWritesAiUsageLogsForAcceptedAndBudgetExceededRequests()
+    {
+        await using var budgetFactory = TaskFlowApiFactory.ForBudgets(userDailyRequestLimit: 1, adminDailyRequestLimit: 1);
+        using var client = budgetFactory.CreateClient();
+        await AuthorizeAsync(client, "budget-admin", "Admin");
+
+        var firstResponse = await client.GetAsync("/api/agents/audit-log?take=1");
+        var secondResponse = await client.GetAsync("/api/agents/audit-log?take=1");
+
+        using var scope = budgetFactory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var logs = await db.AiUsageLogs
+            .Where(log => log.UserName == "budget-admin")
+            .OrderBy(log => log.Id)
+            .ToListAsync();
+
+        Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.TooManyRequests, secondResponse.StatusCode);
+        Assert.Equal(2, logs.Count);
+        Assert.Equal(RateLimitPolicies.AgentPipeline, logs[0].Capability);
+        Assert.Equal((int)HttpStatusCode.OK, logs[0].StatusCode);
+        Assert.False(logs[0].BudgetWasExceeded);
+        Assert.Equal((int)HttpStatusCode.TooManyRequests, logs[1].StatusCode);
+        Assert.True(logs[1].BudgetWasExceeded);
+    }
+
+    [Fact]
+    public async Task AdminCanCreateUserAndUserCanLogin()
+    {
+        using var client = factory.CreateClient();
+        await AuthorizeAsync(client, "user-admin", "Admin");
+
+        var createResponse = await client.PostAsJsonAsync("/api/users/", new
+        {
+            userName = "new-user",
+            email = "new-user@taskflow.local",
+            password = "Password123!",
+            role = "User",
+            dailyAiRequestLimit = 25,
+            isActive = true
+        });
+        var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new
+        {
+            userName = "new-user",
+            password = "Password123!"
+        });
+
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
+
+        await using var stream = await loginResponse.Content.ReadAsStreamAsync();
+        using var document = await JsonDocument.ParseAsync(stream);
+        Assert.Equal("new-user", document.RootElement.GetProperty("userName").GetString());
+        Assert.Equal("User", document.RootElement.GetProperty("role").GetString());
+        Assert.Equal(25, document.RootElement.GetProperty("dailyAiRequestLimit").GetInt32());
+    }
+
+    [Fact]
+    public async Task UserManagementRequiresAdminRole()
+    {
+        using var client = factory.CreateClient();
+        await AuthorizeAsync(client, "normal-manager", "User");
+
+        var response = await client.GetAsync("/api/users/");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]

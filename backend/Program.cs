@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
@@ -19,6 +20,7 @@ using Qdrant.Client;
 using Scalar.AspNetCore;
 using TaskFlow.Api.Data;
 using TaskFlow.Api.Endpoints;
+using TaskFlow.Api.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +28,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddMemoryCache();
+builder.Services.Configure<AiUsageBudgetOptions>(builder.Configuration.GetSection("AiUsageBudget"));
+builder.Services.Configure<SeedAdminOptions>(builder.Configuration.GetSection("SeedAdmin"));
+builder.Services.AddScoped<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
 
 var jwtOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>() ?? new JwtOptions();
 if (Encoding.UTF8.GetByteCount(jwtOptions.SigningKey) < 32)
@@ -66,6 +71,8 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(AuthPolicies.CanUseAgents, policy =>
         policy.RequireAuthenticatedUser().RequireRole("Admin"));
     options.AddPolicy(AuthPolicies.CanViewAnalytics, policy =>
+        policy.RequireAuthenticatedUser().RequireRole("Admin"));
+    options.AddPolicy(AuthPolicies.CanManageUsers, policy =>
         policy.RequireAuthenticatedUser().RequireRole("Admin"));
 });
 
@@ -219,6 +226,7 @@ if (!builder.Configuration.GetValue<bool>("TaskFlow:SkipMigrations"))
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
+    await SeedInitialAdminAsync(scope.ServiceProvider, builder.Configuration);
 }
 
 // Configure HTTP pipeline
@@ -236,6 +244,7 @@ app.UseRateLimiter();
 
 // Map endpoints
 app.MapAuthEndpoints();
+app.MapUserEndpoints();
 app.MapWorkItemEndpoints();
 app.MapAiEndpoints();
 app.MapRagEndpoints();
@@ -256,6 +265,38 @@ static string GetRateLimitPartitionKey(HttpContext context)
     }
 
     return context.Connection.RemoteIpAddress?.ToString() ?? "anonymous";
+}
+
+static async Task SeedInitialAdminAsync(IServiceProvider services, IConfiguration configuration)
+{
+    var environment = services.GetRequiredService<IWebHostEnvironment>();
+    if (!environment.IsDevelopment())
+    {
+        return;
+    }
+
+    var db = services.GetRequiredService<AppDbContext>();
+    if (await db.AppUsers.AnyAsync())
+    {
+        return;
+    }
+
+    var seedAdmin = configuration.GetSection("SeedAdmin").Get<SeedAdminOptions>() ?? new SeedAdminOptions();
+    var passwordHasher = services.GetRequiredService<IPasswordHasher<AppUser>>();
+    var admin = new AppUser
+    {
+        UserName = seedAdmin.UserName.Trim(),
+        Email = seedAdmin.Email.Trim(),
+        PasswordHash = string.Empty,
+        Role = AppRoles.Admin,
+        DailyAiRequestLimit = seedAdmin.DailyAiRequestLimit,
+        IsActive = true,
+        CreatedAt = DateTime.UtcNow
+    };
+    admin.PasswordHash = passwordHasher.HashPassword(admin, seedAdmin.Password);
+
+    db.AppUsers.Add(admin);
+    await db.SaveChangesAsync();
 }
 
 public partial class Program;

@@ -78,7 +78,8 @@ public static class RagEndpoints
             });
         })
         .RequireAuthorization(AuthPolicies.CanIngestKnowledge)
-        .RequireRateLimiting(RateLimitPolicies.KnowledgeIngest);
+        .RequireRateLimiting(RateLimitPolicies.KnowledgeIngest)
+        .AddEndpointFilter(new AiUsageBudgetFilter(RateLimitPolicies.KnowledgeIngest));
 
         // 2. Ask: embed the question, retrieve the top-K most similar chunks, then let the LLM
         //    answer grounded strictly in that retrieved context (classic RAG).
@@ -142,7 +143,8 @@ public static class RagEndpoints
                     RerankPosition = x.Chunk.Position
                 })
             });
-        }).RequireRateLimiting(RateLimitPolicies.AiChat);
+        }).RequireRateLimiting(RateLimitPolicies.AiChat)
+        .AddEndpointFilter(new AiUsageBudgetFilter(RateLimitPolicies.AiChat));
 
         // 3. Ask (streaming): identical retrieval pipeline, but the final answer is streamed to the
         //    client token-by-token over Server-Sent Events instead of waiting for the full response.
@@ -229,7 +231,8 @@ public static class RagEndpoints
             await WriteEventAsync("done", new { });
 
             return Results.Empty;
-        }).RequireRateLimiting(RateLimitPolicies.AiChat);
+        }).RequireRateLimiting(RateLimitPolicies.AiChat)
+        .AddEndpointFilter(new AiUsageBudgetFilter(RateLimitPolicies.AiChat));
 
         return routes;
     }

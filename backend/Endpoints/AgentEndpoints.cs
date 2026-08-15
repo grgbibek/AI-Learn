@@ -32,7 +32,8 @@ public static class AgentEndpoints
         var group = routes.MapGroup("/api/agents")
             .WithTags("Multi-Agent Orchestration")
             .RequireAuthorization(AuthPolicies.CanUseAgents)
-            .RequireRateLimiting(RateLimitPolicies.AgentPipeline);
+            .RequireRateLimiting(RateLimitPolicies.AgentPipeline)
+            .AddEndpointFilter(new AiUsageBudgetFilter(RateLimitPolicies.AgentPipeline));
 
         // Step 1 of 3: Planner Agent - breaks a feature request into concrete subtasks.
         group.MapPost("/plan-feature", async (
