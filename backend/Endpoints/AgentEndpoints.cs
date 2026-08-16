@@ -40,6 +40,7 @@ public static class AgentEndpoints
             [FromBody] PlanFeatureRequest request,
             [FromServices] AppDbContext db,
             [FromServices] IChatClient chatClient,
+            [FromServices] AiUsageRecorder usageRecorder,
             [FromServices] IMemoryCache cache,
             [FromServices] ILoggerFactory loggerFactory,
             CancellationToken ct) =>
@@ -48,14 +49,14 @@ public static class AgentEndpoints
             using var pipelineActivity = AgentTelemetry.Source.StartActivity("PlanFeaturePipeline");
             pipelineActivity?.SetTag("feature_request", request.FeatureRequest);
 
-            var plan = await RunPlannerAgent(request.FeatureRequest, chatClient, ct);
+            var plan = await RunPlannerAgent(request.FeatureRequest, chatClient, usageRecorder, ct);
 
             // Steps 2+3 run sequentially per subtask (not Task.WhenAll) - EF Core's DbContext
             // isn't thread-safe, and each subtask now writes audit rows as it goes.
             var results = new List<AgentPipelineResult>();
             foreach (var subtask in plan.Subtasks)
             {
-                var result = await RunDeveloperReviewLoop(request.FeatureRequest, subtask, chatClient, db, logger, ct);
+                var result = await RunDeveloperReviewLoop(request.FeatureRequest, subtask, chatClient, usageRecorder, db, logger, ct);
                 results.Add(result);
             }
 
@@ -90,6 +91,7 @@ public static class AgentEndpoints
         string featureRequest,
         string subtask,
         IChatClient chatClient,
+        AiUsageRecorder usageRecorder,
         AppDbContext db,
         ILogger logger,
         CancellationToken ct)
@@ -105,8 +107,8 @@ public static class AgentEndpoints
             attemptActivity?.SetTag("subtask", subtask);
             attemptActivity?.SetTag("attempt", attempt);
 
-            developerOutput = await RunDeveloperAgent(subtask, previousFeedback, chatClient, ct);
-            reviewerOutput = await RunReviewerAgent(subtask, developerOutput.TechnicalApproach, chatClient, ct);
+            developerOutput = await RunDeveloperAgent(subtask, previousFeedback, chatClient, usageRecorder, ct);
+            reviewerOutput = await RunReviewerAgent(subtask, developerOutput.TechnicalApproach, chatClient, usageRecorder, ct);
 
             attemptActivity?.SetTag("approved", reviewerOutput.Approved);
 
@@ -138,7 +140,7 @@ public static class AgentEndpoints
         return new AgentPipelineResult(subtask, developerOutput.TechnicalApproach, reviewerOutput.Approved, reviewerOutput.Feedback);
     }
 
-    private static async Task<PlannerOutput> RunPlannerAgent(string featureRequest, IChatClient chatClient, CancellationToken ct)
+    private static async Task<PlannerOutput> RunPlannerAgent(string featureRequest, IChatClient chatClient, AiUsageRecorder usageRecorder, CancellationToken ct)
     {
         using var activity = AgentTelemetry.Source.StartActivity("PlannerAgent");
         activity?.SetTag("feature_request", featureRequest);
@@ -153,6 +155,7 @@ public static class AgentEndpoints
 
         var options = new ChatOptions { ResponseFormat = ChatResponseFormat.ForJsonSchema<PlannerOutput>() };
         var response = await chatClient.GetResponseAsync(prompt, options, ct);
+        usageRecorder.Record(response);
 
         try
         {
@@ -167,7 +170,7 @@ public static class AgentEndpoints
         }
     }
 
-    private static async Task<DeveloperOutput> RunDeveloperAgent(string subtask, string? previousFeedback, IChatClient chatClient, CancellationToken ct)
+    private static async Task<DeveloperOutput> RunDeveloperAgent(string subtask, string? previousFeedback, IChatClient chatClient, AiUsageRecorder usageRecorder, CancellationToken ct)
     {
         using var activity = AgentTelemetry.Source.StartActivity("DeveloperAgent");
         activity?.SetTag("subtask", subtask);
@@ -187,6 +190,7 @@ public static class AgentEndpoints
 
         var options = new ChatOptions { ResponseFormat = ChatResponseFormat.ForJsonSchema<DeveloperOutput>() };
         var response = await chatClient.GetResponseAsync(prompt, options, ct);
+        usageRecorder.Record(response);
 
         try
         {
@@ -200,7 +204,7 @@ public static class AgentEndpoints
         }
     }
 
-    private static async Task<ReviewerOutput> RunReviewerAgent(string subtask, string technicalApproach, IChatClient chatClient, CancellationToken ct)
+    private static async Task<ReviewerOutput> RunReviewerAgent(string subtask, string technicalApproach, IChatClient chatClient, AiUsageRecorder usageRecorder, CancellationToken ct)
     {
         using var activity = AgentTelemetry.Source.StartActivity("ReviewerAgent");
         activity?.SetTag("subtask", subtask);
@@ -218,6 +222,7 @@ public static class AgentEndpoints
 
         var options = new ChatOptions { ResponseFormat = ChatResponseFormat.ForJsonSchema<ReviewerOutput>() };
         var response = await chatClient.GetResponseAsync(prompt, options, ct);
+        usageRecorder.Record(response);
 
         try
         {

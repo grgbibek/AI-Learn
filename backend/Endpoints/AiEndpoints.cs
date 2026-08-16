@@ -44,6 +44,7 @@ public static class AiEndpoints
             int id, 
             [FromServices] AppDbContext db, 
             [FromServices] IChatClient chatClient,
+            [FromServices] AiUsageRecorder usageRecorder,
             CancellationToken ct) =>
         {
             var item = await db.WorkItems.FindAsync(new object[] { id }, ct);
@@ -62,6 +63,7 @@ public static class AiEndpoints
                 """;
 
             var response = await chatClient.GetResponseAsync(prompt, cancellationToken: ct);
+            usageRecorder.Record(response);
 
             return Results.Ok(new
             {
@@ -76,6 +78,7 @@ public static class AiEndpoints
             int id,
             [FromServices] AppDbContext db,
             [FromServices] IChatClient chatClient,
+            [FromServices] AiUsageRecorder usageRecorder,
             CancellationToken ct) =>
         {
             var item = await db.WorkItems.FindAsync(new object[] { id }, ct);
@@ -97,6 +100,7 @@ public static class AiEndpoints
             };
 
             var response = await chatClient.GetResponseAsync(prompt, options, ct);
+            usageRecorder.Record(response);
 
             try
             {
@@ -135,6 +139,7 @@ public static class AiEndpoints
             [FromBody] WorkloadQueryRequest request,
             [FromServices] AppDbContext db,
             [FromServices] IChatClient chatClient,
+            [FromServices] AiUsageRecorder usageRecorder,
             CancellationToken ct) =>
         {
             [Description("Gets the list of work items filtered by priority (1=High, 2=Medium, 3=Low)")]
@@ -155,6 +160,7 @@ public static class AiEndpoints
             };
 
             var response = await chatClient.GetResponseAsync(request.UserPrompt, options, ct);
+            usageRecorder.Record(response);
 
             return Results.Ok(new
             {

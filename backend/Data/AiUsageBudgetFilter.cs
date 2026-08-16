@@ -47,6 +47,7 @@ public sealed class AiUsageBudgetFilter(string capability) : IEndpointFilter
                 : options.UserDailyTokenLimit);
         var providerName = configuration["Ollama:ProviderName"] ?? "Ollama";
         var modelName = configuration["Ollama:ChatModel"] ?? "unknown";
+        var usageRecorder = httpContext.RequestServices.GetRequiredService<AiUsageRecorder>();
         var estimatedInputTokens = EstimateInputTokens(context);
         var estimatedCostUsd = EstimateCost(estimatedInputTokens, options.EstimatedCostPerThousandTokensUsd);
 
@@ -68,6 +69,7 @@ public sealed class AiUsageBudgetFilter(string capability) : IEndpointFilter
             await SaveUsageLogAsync(
                 db,
                 httpContext,
+                usageRecorder,
                 userName,
                 role,
                 providerName,
@@ -93,6 +95,7 @@ public sealed class AiUsageBudgetFilter(string capability) : IEndpointFilter
             await SaveUsageLogAsync(
                 db,
                 httpContext,
+                usageRecorder,
                 userName,
                 role,
                 providerName,
@@ -135,6 +138,7 @@ public sealed class AiUsageBudgetFilter(string capability) : IEndpointFilter
             await SaveUsageLogAsync(
                 db,
                 httpContext,
+                usageRecorder,
                 userName,
                 role,
                 providerName,
@@ -154,6 +158,7 @@ public sealed class AiUsageBudgetFilter(string capability) : IEndpointFilter
     private async Task SaveUsageLogAsync(
         AppDbContext db,
         HttpContext httpContext,
+        AiUsageRecorder usageRecorder,
         string userName,
         string role,
         string providerName,
@@ -167,7 +172,11 @@ public sealed class AiUsageBudgetFilter(string capability) : IEndpointFilter
         int? durationMs = null)
     {
         var finishedAt = DateTime.UtcNow;
-        var estimatedTotalTokens = estimatedInputTokens + estimatedOutputTokens;
+        var tokenUsageSource = usageRecorder.HasProviderReportedUsage ? "ProviderReported" : "Estimated";
+        var loggedInputTokens = usageRecorder.InputTokens ?? estimatedInputTokens;
+        var loggedOutputTokens = usageRecorder.OutputTokens ?? estimatedOutputTokens;
+        var estimatedTotalTokens = usageRecorder.TotalTokens ?? (loggedInputTokens + loggedOutputTokens);
+        var loggedModelName = usageRecorder.ModelName ?? modelName;
         db.AiUsageLogs.Add(new AiUsageLog
         {
             UserName = userName,
@@ -176,12 +185,13 @@ public sealed class AiUsageBudgetFilter(string capability) : IEndpointFilter
             Endpoint = httpContext.Request.Path.Value ?? string.Empty,
             HttpMethod = httpContext.Request.Method,
             ProviderName = providerName,
-            ModelName = modelName,
+            ModelName = loggedModelName,
             StatusCode = statusCode,
-            EstimatedInputTokens = estimatedInputTokens,
-            EstimatedOutputTokens = estimatedOutputTokens,
+            EstimatedInputTokens = loggedInputTokens,
+            EstimatedOutputTokens = loggedOutputTokens,
             EstimatedTotalTokens = estimatedTotalTokens,
-            EstimatedCostUsd = estimatedCostUsd,
+            TokenUsageSource = tokenUsageSource,
+            EstimatedCostUsd = EstimateCost(estimatedTotalTokens, httpContext.RequestServices.GetRequiredService<IOptions<AiUsageBudgetOptions>>().Value.EstimatedCostPerThousandTokensUsd),
             StartedAt = startedAt,
             FinishedAt = finishedAt,
             DurationMs = durationMs ?? (int)Math.Min((finishedAt - startedAt).TotalMilliseconds, int.MaxValue),

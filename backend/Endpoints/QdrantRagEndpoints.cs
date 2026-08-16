@@ -74,6 +74,7 @@ public static class QdrantRagEndpoints
             [FromServices] IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
             [FromServices] IChatClient chatClient,
             [FromServices] DataSanitizationService dataSanitizer,
+            [FromServices] AiUsageRecorder usageRecorder,
             CancellationToken ct) =>
         {
             var questionSanitization = dataSanitizer.Sanitize(request.Question);
@@ -129,6 +130,7 @@ public static class QdrantRagEndpoints
                 """;
 
             var response = await chatClient.GetResponseAsync(prompt, cancellationToken: ct);
+            usageRecorder.Record(response);
             var answerSanitization = dataSanitizer.Sanitize(response.Text);
 
             return Results.Ok(new

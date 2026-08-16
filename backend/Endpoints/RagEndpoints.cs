@@ -90,6 +90,7 @@ public static class RagEndpoints
             [FromServices] HybridSearchService hybridSearch,
             [FromServices] IChatClient chatClient,
             [FromServices] DataSanitizationService dataSanitizer,
+            [FromServices] AiUsageRecorder usageRecorder,
             CancellationToken ct) =>
         {
             var questionSanitization = dataSanitizer.Sanitize(request.Question);
@@ -124,6 +125,7 @@ public static class RagEndpoints
                 """;
 
             var response = await chatClient.GetResponseAsync(prompt, cancellationToken: ct);
+            usageRecorder.Record(response);
             var answerSanitization = dataSanitizer.Sanitize(response.Text);
 
             return Results.Ok(new

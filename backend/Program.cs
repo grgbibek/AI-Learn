@@ -31,6 +31,7 @@ builder.Services.AddMemoryCache();
 builder.Services.Configure<AiUsageBudgetOptions>(builder.Configuration.GetSection("AiUsageBudget"));
 builder.Services.Configure<SeedAdminOptions>(builder.Configuration.GetSection("SeedAdmin"));
 builder.Services.AddScoped<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
+builder.Services.AddScoped<AiUsageRecorder>();
 
 var jwtOptions = builder.Configuration.GetSection("Jwt").Get<JwtOptions>() ?? new JwtOptions();
 if (Encoding.UTF8.GetByteCount(jwtOptions.SigningKey) < 32)
