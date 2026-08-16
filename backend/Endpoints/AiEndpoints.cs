@@ -27,10 +27,14 @@ public record AiSubtaskAnalysis(
     [property: Description("Must be exactly one of: Low, Medium, High")] string ComplexityLevel
 );
 
+public record StreamChatRequest(string Prompt);
+
 public record CompareSemanticSimilarityRequest(string Text1, string Text2);
 
 public static class AiEndpoints
 {
+    private static readonly JsonSerializerOptions SseJsonOptions = new(JsonSerializerDefaults.Web);
+
     public static IEndpointRouteBuilder MapAiEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/ai")
@@ -71,6 +75,61 @@ public static class AiEndpoints
                 OriginalTitle = item.Title,
                 SuggestedSubtasks = response.Text
             });
+        });
+
+        // 1b. Streaming chat endpoint (Phase 4): emits model output as Server-Sent Events so
+        // Angular can render the answer progressively and cancel generation via AbortController.
+        group.MapPost("/stream", async (
+            HttpContext httpContext,
+            [FromBody] StreamChatRequest request,
+            [FromServices] IChatClient chatClient,
+            [FromServices] DataSanitizationService dataSanitizer,
+            CancellationToken ct) =>
+        {
+            var promptSanitization = dataSanitizer.Sanitize(request.Prompt);
+            if (string.IsNullOrWhiteSpace(promptSanitization.SanitizedText))
+            {
+                return Results.BadRequest(new { Message = "Prompt is required." });
+            }
+
+            httpContext.Response.ContentType = "text/event-stream";
+            httpContext.Response.Headers["Cache-Control"] = "no-cache";
+            httpContext.Response.Headers["X-Accel-Buffering"] = "no";
+
+            async Task WriteEventAsync(string eventName, object payload)
+            {
+                var json = JsonSerializer.Serialize(payload, SseJsonOptions);
+                await httpContext.Response.WriteAsync($"event: {eventName}\ndata: {json}\n\n", ct);
+                await httpContext.Response.Body.FlushAsync(ct);
+            }
+
+            await WriteEventAsync("started", new
+            {
+                Prompt = promptSanitization.SanitizedText,
+                promptSanitization.WasSanitized,
+                promptSanitization.DetectedTypes
+            });
+
+            var prompt = $"""
+                You are TaskFlow's AI engineering assistant for a senior .NET 10 and Angular 19 learner.
+                Be practical, concise, and implementation-focused.
+                When code is useful, prefer small complete examples over broad theory.
+
+                User prompt:
+                {promptSanitization.SanitizedText}
+                """;
+
+            await foreach (var update in chatClient.GetStreamingResponseAsync(prompt, cancellationToken: ct))
+            {
+                if (!string.IsNullOrEmpty(update.Text))
+                {
+                    await WriteEventAsync("token", new { Text = dataSanitizer.Sanitize(update.Text).SanitizedText });
+                }
+            }
+
+            await WriteEventAsync("done", new { });
+
+            return Results.Empty;
         });
 
         // 2. Structured JSON Output Endpoint (Lesson 2 - Pattern A)

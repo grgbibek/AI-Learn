@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { TaskBoardComponent } from './components/task-board/task-board.component';
+import { StreamingAssistantComponent } from './components/streaming-assistant/streaming-assistant.component';
 import { KnowledgeBaseComponent } from './components/knowledge-base/knowledge-base.component';
 import { AgentPipelineComponent } from './components/agent-pipeline/agent-pipeline.component';
 import { AnalyticsDashboardComponent } from './components/analytics-dashboard/analytics-dashboard.component';
@@ -7,13 +8,14 @@ import { LoginComponent } from './components/login/login.component';
 import { UserManagementComponent } from './components/user-management/user-management.component';
 import { AuthService } from './services/auth.service';
 
-export type ActiveTab = 'board' | 'analytics' | 'rag' | 'agent' | 'users' | 'all';
+export type ActiveTab = 'board' | 'assistant' | 'analytics' | 'rag' | 'agent' | 'users' | 'all';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [
     TaskBoardComponent,
+    StreamingAssistantComponent,
     KnowledgeBaseComponent,
     AgentPipelineComponent,
     AnalyticsDashboardComponent,
@@ -44,6 +46,12 @@ export type ActiveTab = 'board' | 'analytics' | 'rag' | 'agent' | 'users' | 'all
               (click)="activeTab.set('analytics')" 
               class="tab-btn">
               📊 Analytics
+            </button>
+            <button
+              [class.active]="activeTab() === 'assistant'"
+              (click)="activeTab.set('assistant')"
+              class="tab-btn">
+              AI Assistant
             </button>
             <button 
               [class.active]="activeTab() === 'rag'" 
@@ -101,6 +109,10 @@ export type ActiveTab = 'board' | 'analytics' | 'rag' | 'agent' | 'users' | 'all
           <app-task-board></app-task-board>
         }
 
+        @if (activeTab() === 'assistant') {
+          <app-streaming-assistant></app-streaming-assistant>
+        }
+
         @if (activeTab() === 'rag') {
           <app-knowledge-base></app-knowledge-base>
         }
@@ -116,6 +128,7 @@ export type ActiveTab = 'board' | 'analytics' | 'rag' | 'agent' | 'users' | 'all
         @if (activeTab() === 'all') {
           <app-analytics-dashboard></app-analytics-dashboard>
           <app-task-board></app-task-board>
+          <app-streaming-assistant></app-streaming-assistant>
           <app-knowledge-base></app-knowledge-base>
           <app-agent-pipeline></app-agent-pipeline>
           @if (auth.isAdmin()) {

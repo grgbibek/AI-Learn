@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import {
   SubtaskAnalysisResponse,
   WorkloadAssistantResponse,
+  StreamingAssistantResponse,
   SemanticSimilarityResponse,
   IngestDocumentResponse,
   AskKnowledgeBaseResponse
@@ -28,6 +29,12 @@ export class AiService {
   // Natural-language workload assistant (native C# tool calling)
   readonly assistantLoading = signal<boolean>(false);
   readonly assistantResponse = signal<WorkloadAssistantResponse | null>(null);
+
+  // Streaming general assistant (Phase 4 SSE)
+  readonly streamingLoading = signal<boolean>(false);
+  readonly streamingResponse = signal<StreamingAssistantResponse | null>(null);
+  readonly streamingError = signal<string | null>(null);
+  private streamAbortController: AbortController | null = null;
 
   suggestSubtasks(workItemId: number): void {
     this.loading.set(true);
@@ -72,6 +79,33 @@ export class AiService {
 
   compareSemanticSimilarity(text1: string, text2: string) {
     return this.http.post<SemanticSimilarityResponse>(`${this.apiUrl}/semantic-similarity`, { text1, text2 });
+  }
+
+  askStreamingAssistant(prompt: string): void {
+    this.streamingLoading.set(true);
+    this.streamingError.set(null);
+    this.streamingResponse.set({ prompt, answer: '' });
+    this.streamAbortController = new AbortController();
+
+    this.streamAssistant(prompt, this.streamAbortController.signal).catch((err: unknown) => {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        this.streamingLoading.set(false);
+        return;
+      }
+
+      console.error('Failed to stream AI assistant response', err);
+      this.streamingError.set('Streaming assistant is unavailable. Make sure the backend and Ollama are running.');
+      this.streamingLoading.set(false);
+    });
+  }
+
+  stopStreamingAssistant(): void {
+    this.streamAbortController?.abort();
+  }
+
+  clearStreamingAssistant(): void {
+    this.streamingResponse.set(null);
+    this.streamingError.set(null);
   }
 
   // RAG Knowledge Base (Phase 3, Lesson 2): ingest documents, then ask grounded questions.
@@ -188,6 +222,43 @@ export class AiService {
     this.askLoading.set(false);
   }
 
+  private async streamAssistant(prompt: string, signal: AbortSignal): Promise<void> {
+    const token = await this.auth.getAccessToken();
+    const response = await fetch(`${this.apiUrl}/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ prompt }),
+      signal
+    });
+
+    if (!response.ok || !response.body) {
+      throw new Error(`Request failed with status ${response.status}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      const frames = buffer.split('\n\n');
+      buffer = frames.pop() ?? '';
+
+      for (const frame of frames) {
+        this.handleAssistantSseFrame(frame);
+      }
+    }
+
+    this.streamingLoading.set(false);
+  }
+
   private handleSseFrame(frame: string): void {
     let eventName = 'message';
     let data = '';
@@ -208,6 +279,33 @@ export class AiService {
       });
     } else if (eventName === 'token') {
       this.askResult.update(current => current && {
+        ...current,
+        answer: current.answer + payload.text
+      });
+    }
+  }
+
+  private handleAssistantSseFrame(frame: string): void {
+    let eventName = 'message';
+    let data = '';
+
+    for (const line of frame.split('\n')) {
+      if (line.startsWith('event:')) eventName = line.slice(6).trim();
+      else if (line.startsWith('data:')) data += line.slice(5).trim();
+    }
+    if (!data) return;
+
+    const payload = JSON.parse(data);
+
+    if (eventName === 'started') {
+      this.streamingResponse.update(current => current && {
+        ...current,
+        prompt: payload.prompt,
+        wasSanitized: payload.wasSanitized,
+        detectedTypes: payload.detectedTypes
+      });
+    } else if (eventName === 'token') {
+      this.streamingResponse.update(current => current && {
         ...current,
         answer: current.answer + payload.text
       });

@@ -183,6 +183,12 @@ Typical interpretation:
 
 **Deliverable:** An Angular 19 single-page app using Standalone Components and Signals, connected to a .NET 10 backend that streams AI responses over SSE or SignalR and renders dynamic analytics views.
 
+### Started in This Workspace
+
+* Added a general `/api/ai/stream` SSE endpoint powered by `IChatClient.GetStreamingResponseAsync`.
+* Added an Angular Streaming AI Assistant tab using Signals, `fetch` streaming, markdown rendering, and `AbortController` stop support.
+* Reused the existing JWT auth flow for streaming requests.
+
 ---
 
 ## Phase 5: Multi-Agent Systems and Custom C# MCP Servers (Weeks 12+)
@@ -243,7 +249,7 @@ Typical interpretation:
 | Local real LLM setup | In progress/active | Ollama wired in `Program.cs`; local models used for chat and embeddings |
 | Vector similarity | Complete | Semantic similarity endpoint and vector math service |
 | RAG pipeline | In progress/active | SQL vector, Qdrant, Semantic Kernel, and Kernel Memory comparisons |
-| Streaming Angular AI UI | Next major frontend milestone | Phase 4 target |
+| Streaming Angular AI UI | Started | `/api/ai/stream` plus Angular Streaming AI Assistant tab |
 | MCP server | Started | C# MCP server with read-only tools and telemetry tools |
 
 ---
@@ -259,7 +265,7 @@ Typical interpretation:
 - [x] Add local Ollama provider wiring.
 - [x] Build vector similarity and embedding endpoints.
 - [x] Compare custom RAG, Qdrant, Semantic Kernel, and Kernel Memory approaches.
-- [ ] Build the Angular 19 streaming AI assistant UI.
+- [x] Build the first Angular 19 streaming AI assistant UI slice.
 - [ ] Add production-grade RAG evaluation and regression tests.
 - [ ] Harden MCP tools with authorization, write-operation guardrails, and telemetry.
 
@@ -268,7 +274,7 @@ Typical interpretation:
 ## Recommended Next Steps
 
 1. **Finish Phase 3 cleanly**: stabilize the RAG pipeline, document tradeoffs between SQL vector search, Qdrant, Semantic Kernel, and Kernel Memory, and add tests around retrieval quality.
-2. **Start Phase 4**: build an Angular 19 streaming AI UI using Signals and SSE or SignalR.
+2. **Deepen Phase 4**: add conversation history, richer markdown/code UX, retry states, and optional SignalR comparison.
 3. **Production hardening**: add prompt injection checks, token budget limits, audit logs, OpenTelemetry dashboards, and regression tests for AI responses.
 4. **Return to Phase 5**: expand the MCP server from read-only tools to carefully guarded write workflows.
 

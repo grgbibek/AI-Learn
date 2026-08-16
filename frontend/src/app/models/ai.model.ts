@@ -12,6 +12,13 @@ export interface WorkloadAssistantResponse {
   response: string;
 }
 
+export interface StreamingAssistantResponse {
+  prompt: string;
+  answer: string;
+  wasSanitized?: boolean;
+  detectedTypes?: string[];
+}
+
 export interface SemanticSimilarityResponse {
   text1: string;
   text2: string;

@@ -1,0 +1,75 @@
+<section class="assistant-panel">
+  <header class="assistant-header">
+    <span class="assistant-icon">AI</span>
+    <div>
+      <h3>Streaming AI Assistant</h3>
+      <p>Ask the local Ollama-backed .NET assistant and watch the response stream into Angular Signals.</p>
+    </div>
+  </header>
+
+  <div class="assistant-grid">
+    <div class="assistant-card composer-card">
+      <h4>Prompt</h4>
+      <textarea
+        [ngModel]="prompt()"
+        (ngModelChange)="prompt.set($event)"
+        (keydown.control.enter)="onAsk()"
+        class="assistant-textarea"
+        rows="9"
+      ></textarea>
+
+      <div class="assistant-actions">
+        <button type="button" (click)="onAsk()" [disabled]="ai.streamingLoading()" class="btn-action btn-ai">
+          @if (ai.streamingLoading()) {
+            Streaming...
+          } @else {
+            Ask Assistant
+          }
+        </button>
+
+        @if (ai.streamingLoading()) {
+          <button type="button" (click)="onStop()" class="btn-action btn-stop">Stop</button>
+        }
+
+        @if (ai.streamingResponse()) {
+          <button type="button" (click)="onClear()" class="btn-action btn-secondary">Clear</button>
+        }
+      </div>
+
+      @if (ai.streamingError(); as err) {
+        <p class="assistant-error">{{ err }}</p>
+      }
+    </div>
+
+    <div class="assistant-card response-card">
+      <div class="response-title-row">
+        <h4>Live Response</h4>
+        @if (ai.streamingLoading()) {
+          <span class="streaming-badge">receiving</span>
+        }
+      </div>
+
+      @if (ai.streamingResponse(); as result) {
+        @if (result.wasSanitized) {
+          <p class="sanitization-note">Sanitized input: {{ result.detectedTypes?.join(', ') }}</p>
+        }
+
+        <div class="assistant-answer">
+          @if (result.answer) {
+            <app-markdown-render [content]="result.answer"></app-markdown-render>
+          } @else {
+            <p class="empty-answer">Waiting for the first token...</p>
+          }
+          @if (ai.streamingLoading()) {
+            <span class="streaming-cursor">|</span>
+          }
+        </div>
+      } @else {
+        <div class="empty-state">
+          <strong>No response yet</strong>
+          <p>Run a prompt to see Server-Sent Events render progressively in this panel.</p>
+        </div>
+      }
+    </div>
+  </div>
+</section>
