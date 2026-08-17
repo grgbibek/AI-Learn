@@ -19,6 +19,36 @@ export interface StreamingAssistantResponse {
   detectedTypes?: string[];
 }
 
+export interface AiConversationSummaryResponse {
+  id: number;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  lastMessagePreview?: string;
+  messageCount: number;
+}
+
+export type AiConversationRole = 'user' | 'assistant';
+
+export interface AiConversationMessageResponse {
+  id: number;
+  role: AiConversationRole;
+  content: string;
+  createdAt: string;
+  wasSanitized: boolean;
+  detectedTypes: readonly string[];
+}
+
+export interface AiConversationResponse {
+  id: number;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messages: AiConversationMessageResponse[];
+}
+
+export type StreamingAssistantStatus = 'idle' | 'loadingConversations' | 'loadingConversation' | 'streaming' | 'error';
+
 export interface SemanticSimilarityResponse {
   text1: string;
   text2: string;

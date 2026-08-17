@@ -9,6 +9,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
     public DbSet<AgentAuditLog> AgentAuditLogs => Set<AgentAuditLog>();
     public DbSet<AiUsageLog> AiUsageLogs => Set<AiUsageLog>();
+    public DbSet<AiConversation> AiConversations => Set<AiConversation>();
+    public DbSet<AiConversationMessage> AiConversationMessages => Set<AiConversationMessage>();
     public DbSet<AppUser> AppUsers => Set<AppUser>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -21,6 +23,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<AiUsageLog>()
             .Property(log => log.EstimatedCostUsd)
             .HasPrecision(18, 6);
+
+        modelBuilder.Entity<AiConversation>()
+            .HasIndex(conversation => new { conversation.UserName, conversation.UpdatedAt });
+
+        modelBuilder.Entity<AiConversation>()
+            .HasMany(conversation => conversation.Messages)
+            .WithOne(message => message.Conversation)
+            .HasForeignKey(message => message.ConversationId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<AiConversationMessage>()
+            .HasIndex(message => new { message.ConversationId, message.CreatedAt });
 
         modelBuilder.Entity<AppUser>()
             .HasIndex(user => user.UserName)

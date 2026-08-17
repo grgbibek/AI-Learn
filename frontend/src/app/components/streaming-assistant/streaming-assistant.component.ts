@@ -1,6 +1,6 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AiService } from '../../services/ai.service';
+import { StreamingAssistantService } from '../../services/streaming-assistant.service';
 import { MarkdownRenderComponent } from '../shared/markdown-render.component';
 
 @Component({
@@ -10,24 +10,41 @@ import { MarkdownRenderComponent } from '../shared/markdown-render.component';
   templateUrl: './streaming-assistant.component.html',
   styleUrl: './streaming-assistant.component.css'
 })
-export class StreamingAssistantComponent {
-  readonly ai = inject(AiService);
+export class StreamingAssistantComponent implements OnInit {
+  readonly assistant = inject(StreamingAssistantService);
   readonly prompt = signal<string>('Explain how Angular Signals should consume a .NET SSE stream in this app.');
+
+  ngOnInit(): void {
+    void this.assistant.loadConversations();
+  }
+
+  onNewConversation(): void {
+    void this.assistant.createConversation();
+  }
+
+  onSelectConversation(id: number): void {
+    void this.assistant.loadConversation(id);
+  }
+
+  onDeleteConversation(event: MouseEvent, id: number): void {
+    event.stopPropagation();
+    void this.assistant.deleteConversation(id);
+  }
 
   onAsk(): void {
     const prompt = this.prompt().trim();
-    if (!prompt || this.ai.streamingLoading()) {
+    if (!prompt || this.assistant.isStreaming()) {
       return;
     }
 
-    this.ai.askStreamingAssistant(prompt);
+    void this.assistant.sendPrompt(prompt).then(() => this.prompt.set(''));
   }
 
   onStop(): void {
-    this.ai.stopStreamingAssistant();
+    this.assistant.stopStreaming();
   }
 
-  onClear(): void {
-    this.ai.clearStreamingAssistant();
+  onDismissError(): void {
+    this.assistant.clearError();
   }
 }

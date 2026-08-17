@@ -188,6 +188,7 @@ Typical interpretation:
 * Added a general `/api/ai/stream` SSE endpoint powered by `IChatClient.GetStreamingResponseAsync`.
 * Added an Angular Streaming AI Assistant tab using Signals, `fetch` streaming, markdown rendering, and `AbortController` stop support.
 * Reused the existing JWT auth flow for streaming requests.
+* Added SQL-backed conversation history for the Streaming AI Assistant, including conversation list, persisted messages, conversation-aware SSE streaming, and reloadable chat threads.
 
 ---
 
@@ -249,7 +250,7 @@ Typical interpretation:
 | Local real LLM setup | In progress/active | Ollama wired in `Program.cs`; local models used for chat and embeddings |
 | Vector similarity | Complete | Semantic similarity endpoint and vector math service |
 | RAG pipeline | In progress/active | SQL vector, Qdrant, Semantic Kernel, and Kernel Memory comparisons |
-| Streaming Angular AI UI | Started | `/api/ai/stream` plus Angular Streaming AI Assistant tab |
+| Streaming Angular AI UI | In progress/active | `/api/ai/stream`, persisted conversation history, and Angular Streaming AI Assistant tab |
 | MCP server | Started | C# MCP server with read-only tools and telemetry tools |
 
 ---
@@ -266,6 +267,7 @@ Typical interpretation:
 - [x] Build vector similarity and embedding endpoints.
 - [x] Compare custom RAG, Qdrant, Semantic Kernel, and Kernel Memory approaches.
 - [x] Build the first Angular 19 streaming AI assistant UI slice.
+- [x] Add persisted conversation history to the Streaming AI Assistant.
 - [ ] Add production-grade RAG evaluation and regression tests.
 - [ ] Harden MCP tools with authorization, write-operation guardrails, and telemetry.
 
@@ -274,7 +276,7 @@ Typical interpretation:
 ## Recommended Next Steps
 
 1. **Finish Phase 3 cleanly**: stabilize the RAG pipeline, document tradeoffs between SQL vector search, Qdrant, Semantic Kernel, and Kernel Memory, and add tests around retrieval quality.
-2. **Deepen Phase 4**: add conversation history, richer markdown/code UX, retry states, and optional SignalR comparison.
+2. **Deepen Phase 4**: add conversation-history tests, richer markdown/code UX, retry states, and optional SignalR comparison.
 3. **Production hardening**: add prompt injection checks, token budget limits, audit logs, OpenTelemetry dashboards, and regression tests for AI responses.
 4. **Return to Phase 5**: expand the MCP server from read-only tools to carefully guarded write workflows.
 

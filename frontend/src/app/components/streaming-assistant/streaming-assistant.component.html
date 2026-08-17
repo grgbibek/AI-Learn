@@ -8,8 +8,81 @@
   </header>
 
   <div class="assistant-grid">
-    <div class="assistant-card composer-card">
-      <h4>Prompt</h4>
+    <aside class="assistant-card conversation-sidebar">
+      <div class="sidebar-title-row">
+        <h4>Conversations</h4>
+        <button type="button" (click)="onNewConversation()" [disabled]="assistant.isStreaming()" class="btn-action btn-secondary">New</button>
+      </div>
+
+      @if (assistant.conversations().length === 0) {
+        <p class="empty-list">No saved conversations yet.</p>
+      } @else {
+        <div class="conversation-list">
+          @for (conversation of assistant.conversations(); track conversation.id) {
+            <button
+              type="button"
+              class="conversation-item"
+              [class.active]="assistant.activeConversation()?.id === conversation.id"
+              [disabled]="assistant.isStreaming()"
+              (click)="onSelectConversation(conversation.id)"
+            >
+              <span class="conversation-title">{{ conversation.title }}</span>
+              @if (conversation.lastMessagePreview) {
+                <span class="conversation-preview">{{ conversation.lastMessagePreview }}</span>
+              }
+              <span class="conversation-meta">{{ conversation.messageCount }} message(s)</span>
+              <span class="delete-row">
+                <span></span>
+                <button type="button" class="delete-conversation" (click)="onDeleteConversation($event, conversation.id)">Delete</button>
+              </span>
+            </button>
+          }
+        </div>
+      }
+    </aside>
+
+    <div class="assistant-card thread-card">
+      <div class="response-title-row">
+        <h4>{{ assistant.activeConversation()?.title ?? 'New conversation' }}</h4>
+        @if (assistant.isStreaming()) {
+          <span class="streaming-badge">receiving</span>
+        }
+      </div>
+
+      <div class="message-thread">
+        @if (assistant.isLoading()) {
+          <p class="empty-answer">Loading conversation...</p>
+        } @else if (assistant.messages().length === 0) {
+          <div class="empty-state">
+            <strong>No messages yet</strong>
+            <p>Send a prompt to start a persisted AI conversation.</p>
+          </div>
+        } @else {
+          @for (message of assistant.messages(); track message.id) {
+            <article class="message-bubble" [class.user-message]="message.role === 'user'" [class.assistant-message]="message.role === 'assistant'">
+              <span class="message-role">{{ message.role }}</span>
+              @if (message.role === 'assistant') {
+                @if (message.content) {
+                  <app-markdown-render [content]="message.content"></app-markdown-render>
+                } @else {
+                  <span class="empty-answer">Waiting for the first token...</span>
+                }
+              } @else {
+                <p>{{ message.content }}</p>
+              }
+              @if (message.wasSanitized) {
+                <span class="sanitization-note">Sanitized: {{ message.detectedTypes.join(', ') }}</span>
+              }
+            </article>
+          }
+          @if (assistant.isStreaming()) {
+            <span class="streaming-cursor">|</span>
+          }
+        }
+      </div>
+
+      <div class="composer-card">
+        <h4>Prompt</h4>
       <textarea
         [ngModel]="prompt()"
         (ngModelChange)="prompt.set($event)"
@@ -19,57 +92,26 @@
       ></textarea>
 
       <div class="assistant-actions">
-        <button type="button" (click)="onAsk()" [disabled]="ai.streamingLoading()" class="btn-action btn-ai">
-          @if (ai.streamingLoading()) {
+        <button type="button" (click)="onAsk()" [disabled]="assistant.isStreaming() || !prompt().trim()" class="btn-action btn-ai">
+          @if (assistant.isStreaming()) {
             Streaming...
           } @else {
             Ask Assistant
           }
         </button>
 
-        @if (ai.streamingLoading()) {
+        @if (assistant.isStreaming()) {
           <button type="button" (click)="onStop()" class="btn-action btn-stop">Stop</button>
         }
-
-        @if (ai.streamingResponse()) {
-          <button type="button" (click)="onClear()" class="btn-action btn-secondary">Clear</button>
-        }
       </div>
 
-      @if (ai.streamingError(); as err) {
-        <p class="assistant-error">{{ err }}</p>
+      @if (assistant.error(); as err) {
+        <div class="assistant-error-box">
+          <p class="assistant-error">{{ err }}</p>
+          <button type="button" (click)="onDismissError()" class="btn-action btn-secondary">Dismiss</button>
+        </div>
       }
     </div>
-
-    <div class="assistant-card response-card">
-      <div class="response-title-row">
-        <h4>Live Response</h4>
-        @if (ai.streamingLoading()) {
-          <span class="streaming-badge">receiving</span>
-        }
-      </div>
-
-      @if (ai.streamingResponse(); as result) {
-        @if (result.wasSanitized) {
-          <p class="sanitization-note">Sanitized input: {{ result.detectedTypes?.join(', ') }}</p>
-        }
-
-        <div class="assistant-answer">
-          @if (result.answer) {
-            <app-markdown-render [content]="result.answer"></app-markdown-render>
-          } @else {
-            <p class="empty-answer">Waiting for the first token...</p>
-          }
-          @if (ai.streamingLoading()) {
-            <span class="streaming-cursor">|</span>
-          }
-        </div>
-      } @else {
-        <div class="empty-state">
-          <strong>No response yet</strong>
-          <p>Run a prompt to see Server-Sent Events render progressively in this panel.</p>
-        </div>
-      }
     </div>
   </div>
 </section>
