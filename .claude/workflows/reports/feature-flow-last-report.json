@@ -1,0 +1,222 @@
+{
+  "mode": "node-ollama",
+  "verdict": "max-loops-reached-needs-human-review",
+  "agents": [
+    {
+      "type": "prompt",
+      "name": "Code Review Agent",
+      "description": "Use when: reviewing changed .NET 10 API and Angular 19 code for bugs, security risks, architecture drift, memory leaks, streaming issues, and missing tests. Findings first.",
+      "path": ".github/prompts/code-review-agent.prompt.md"
+    },
+    {
+      "type": "prompt",
+      "name": "Feature Orchestrator",
+      "description": "Use when: turning a vague feature idea into an implementation-ready .NET 10 + Angular 19 technical plan. Acts as a single supervisor in a DAG of agents; never writes or reviews code itself.",
+      "path": ".github/prompts/feature-orchestrator.prompt.md"
+    },
+    {
+      "type": "prompt",
+      "name": "Implementation Agent",
+      "description": "Use when: implementing an approved plan in this .NET 10 + Angular 19 workspace with a tight edit/validate loop. Reads locally, edits narrowly, builds/tests, fixes local failures, and summarizes results.",
+      "path": ".github/prompts/implementation-agent.prompt.md"
+    },
+    {
+      "type": "prompt",
+      "name": "RAG Debugger",
+      "description": "Use when: debugging AI/RAG answer quality, retrieval ranking, embeddings, prompt behavior, Ollama availability, sanitization, or telemetry in the AI-Learn app.",
+      "path": ".github/prompts/rag-debugger.prompt.md"
+    },
+    {
+      "type": "prompt",
+      "name": "Test Strategist",
+      "description": "Use when: designing focused backend, frontend, integration, and smoke tests for a changed .NET 10 + Angular 19 AI feature. Prioritizes behavior and risk over broad test volume.",
+      "path": ".github/prompts/test-strategist.prompt.md"
+    },
+    {
+      "type": "skill",
+      "name": "ai-feature-spec",
+      "description": "Generate exhaustive, production-grade technical specifications for .NET 10 APIs, Angular 19 Signal stores, DTO contracts, and test strategies.",
+      "path": ".agents/skills/ai-feature-spec/SKILL.md"
+    },
+    {
+      "type": "skill",
+      "name": "code-review",
+      "description": "Perform automated, comprehensive code review for .NET 10 API and Angular 19 codebases. Audits architectural alignment, type safety, security, performance, and memory leaks.",
+      "path": ".agents/skills/code-review/SKILL.md"
+    },
+    {
+      "type": "workflow",
+      "name": "feature-flow",
+      "description": "",
+      "path": ".claude/workflows/feature-flow.js"
+    }
+  ],
+  "runDir": ".agents/runs/feature-flow-2026-08-17T12-41-27-278Z",
+  "specPath": ".agents/runs/feature-flow-2026-08-17T12-41-27-278Z/spec.md",
+  "buildReportPath": ".agents/runs/feature-flow-2026-08-17T12-41-27-278Z/build-report.md",
+  "reviewPath": ".agents/runs/feature-flow-2026-08-17T12-41-27-278Z/review-findings.json",
+  "testPath": ".agents/runs/feature-flow-2026-08-17T12-41-27-278Z/test-plan.md",
+  "debugPath": ".agents/runs/feature-flow-2026-08-17T12-41-27-278Z/debug-diagnosis.md",
+  "loops": 1,
+  "orchestrationReport": {
+    "runId": "feature-flow-2026-08-17T12-41-27-278Z",
+    "mode": "node-ollama",
+    "goal": "Add a /api/health endpoint that returns DB connectivity. The endpoint should report overall status, DB connectivity, and Ollama reachability. Return 200 when healthy and 503 when not. Add a corresponding Angular health card on the dashboard.",
+    "maxLoops": 1,
+    "startedAt": "2026-08-17T12:41:27.278Z",
+    "finishedAt": "2026-08-17T12:57:01.670Z",
+    "durationMs": 934392,
+    "verdict": "max-loops-reached-needs-human-review",
+    "runDir": ".agents/runs/feature-flow-2026-08-17T12-41-27-278Z",
+    "artifacts": {
+      "spec": ".agents/runs/feature-flow-2026-08-17T12-41-27-278Z/spec.md",
+      "buildReport": ".agents/runs/feature-flow-2026-08-17T12-41-27-278Z/build-report.md",
+      "reviewFindings": ".agents/runs/feature-flow-2026-08-17T12-41-27-278Z/review-findings.json",
+      "testPlan": ".agents/runs/feature-flow-2026-08-17T12-41-27-278Z/test-plan.md",
+      "debugDiagnosis": ".agents/runs/feature-flow-2026-08-17T12-41-27-278Z/debug-diagnosis.md",
+      "summary": ".agents/runs/feature-flow-2026-08-17T12-41-27-278Z/summary.md"
+    },
+    "agents": [
+      {
+        "type": "prompt",
+        "name": "Code Review Agent",
+        "description": "Use when: reviewing changed .NET 10 API and Angular 19 code for bugs, security risks, architecture drift, memory leaks, streaming issues, and missing tests. Findings first.",
+        "path": ".github/prompts/code-review-agent.prompt.md"
+      },
+      {
+        "type": "prompt",
+        "name": "Feature Orchestrator",
+        "description": "Use when: turning a vague feature idea into an implementation-ready .NET 10 + Angular 19 technical plan. Acts as a single supervisor in a DAG of agents; never writes or reviews code itself.",
+        "path": ".github/prompts/feature-orchestrator.prompt.md"
+      },
+      {
+        "type": "prompt",
+        "name": "Implementation Agent",
+        "description": "Use when: implementing an approved plan in this .NET 10 + Angular 19 workspace with a tight edit/validate loop. Reads locally, edits narrowly, builds/tests, fixes local failures, and summarizes results.",
+        "path": ".github/prompts/implementation-agent.prompt.md"
+      },
+      {
+        "type": "prompt",
+        "name": "RAG Debugger",
+        "description": "Use when: debugging AI/RAG answer quality, retrieval ranking, embeddings, prompt behavior, Ollama availability, sanitization, or telemetry in the AI-Learn app.",
+        "path": ".github/prompts/rag-debugger.prompt.md"
+      },
+      {
+        "type": "prompt",
+        "name": "Test Strategist",
+        "description": "Use when: designing focused backend, frontend, integration, and smoke tests for a changed .NET 10 + Angular 19 AI feature. Prioritizes behavior and risk over broad test volume.",
+        "path": ".github/prompts/test-strategist.prompt.md"
+      },
+      {
+        "type": "skill",
+        "name": "ai-feature-spec",
+        "description": "Generate exhaustive, production-grade technical specifications for .NET 10 APIs, Angular 19 Signal stores, DTO contracts, and test strategies.",
+        "path": ".agents/skills/ai-feature-spec/SKILL.md"
+      },
+      {
+        "type": "skill",
+        "name": "code-review",
+        "description": "Perform automated, comprehensive code review for .NET 10 API and Angular 19 codebases. Audits architectural alignment, type safety, security, performance, and memory leaks.",
+        "path": ".agents/skills/code-review/SKILL.md"
+      },
+      {
+        "type": "workflow",
+        "name": "feature-flow",
+        "description": "",
+        "path": ".claude/workflows/feature-flow.js"
+      }
+    ],
+    "stages": [
+      {
+        "role": "planner",
+        "phase": "Plan",
+        "effort": "medium",
+        "startedAt": "2026-08-17T12:41:27.285Z",
+        "inputChars": 644,
+        "finishedAt": "2026-08-17T12:44:03.881Z",
+        "durationMs": 156590,
+        "outputChars": 1835,
+        "critical": false,
+        "ragRelated": true,
+        "feedbackSummary": "## Validation Plan\n\n1. **Backend**\n   - Manually test the `/api/health` endpoint using Postman or curl.\n   - Verify the response status codes for healthy and unhealthy states.\n\n2. **Frontend**\n   - Verify that the health card displays the correct health status.\n   - Ensure the health card updates in real-time as the backend health status changes.\n\n## Open Questions\n\n- What are the specific authentication and authorization mechanisms required for the `/api/health` endpoint?\n- Should the health..."
+      },
+      {
+        "role": "developer",
+        "phase": "Build",
+        "effort": "high",
+        "startedAt": "2026-08-17T12:44:03.885Z",
+        "inputChars": 2275,
+        "finishedAt": "2026-08-17T12:46:20.793Z",
+        "durationMs": 136905,
+        "outputChars": 1994,
+        "critical": false,
+        "ragRelated": true,
+        "feedbackSummary": "## Validation\n\n### Backend\n- Manually test the `/api/health` endpoint using Postman or curl.\n- Verify the response status codes for healthy and unhealthy states.\n\n### Frontend\n- Verify that the health card displays the correct health status.\n- Ensure the health card updates in real-time as the backend health status changes.\n\n## Files Changed\n\n- backend/controllers/HealthController.cs\n- frontend/src/app/health-card/health-card.component.ts\n- frontend/src/app/health-card/health-card.component.h..."
+      },
+      {
+        "role": "reviewer",
+        "phase": "Review",
+        "effort": "high",
+        "startedAt": "2026-08-17T12:46:20.796Z",
+        "inputChars": 4370,
+        "finishedAt": "2026-08-17T12:48:49.389Z",
+        "durationMs": 148549,
+        "outputChars": 1653,
+        "critical": true,
+        "ragRelated": true,
+        "feedbackSummary": "## Findings\n\n1. **Security Risk**\n   - The `/api/health` endpoint is exposed without proper authentication and authorization mechanisms, which could allow unauthorized access to the endpoint and sensitive information.\n   - **File Reference:** backend/controllers/HealthController.cs\n\n2. **Backend Check**\n   - The logic for checking Ollama reachability is not implemented. If Ollama is not reachable, the endpoint should return a 503 status code.\n   - **File Reference:** backend/controllers/Healt..."
+      },
+      {
+        "role": "tester",
+        "phase": "Test",
+        "effort": "medium",
+        "startedAt": "2026-08-17T12:48:49.390Z",
+        "inputChars": 4333,
+        "finishedAt": "2026-08-17T12:51:49.182Z",
+        "durationMs": 179734,
+        "outputChars": 2426,
+        "critical": false,
+        "ragRelated": true,
+        "feedbackSummary": "## Behavior Under Test\n\nThe `/api/health` endpoint should return the current health status of the application, including DB connectivity and Ollama reachability. The endpoint should respond with a 200 status code when healthy and a 503 status code when not.\n\n## Risk Map\n\n1. **DB Connectivity**: The application may not be able to connect to the database, causing the health check to fail.\n2. **Ollama Reachability**: The Ollama service may be unreachable, affecting the health status.\n3. **Authen..."
+      },
+      {
+        "role": "tester",
+        "phase": "Test",
+        "effort": "medium",
+        "startedAt": "2026-08-17T12:51:49.193Z",
+        "inputChars": 5957,
+        "finishedAt": "2026-08-17T12:54:19.631Z",
+        "durationMs": 150393,
+        "outputChars": 2265,
+        "critical": true,
+        "ragRelated": true,
+        "feedbackSummary": "```markdown\n## Behavior Under Test\nThe `/api/health` endpoint checks DB connectivity, overall status, and Ollama reachability, returning 200 when healthy and 503 when not.\n\n## Risk Map\n1. **Security Risk**: The `/api/health` endpoint is exposed without proper authentication and authorization mechanisms.\n2. **Backend Check**: The logic for checking Ollama reachability is not implemented.\n3. **Frontend Check**: The health card component does not handle the case when the backend is unreachable.\n..."
+      },
+      {
+        "role": "debugger",
+        "phase": "Debug",
+        "effort": "high",
+        "startedAt": "2026-08-17T12:54:19.857Z",
+        "inputChars": 8361,
+        "finishedAt": "2026-08-17T12:57:01.668Z",
+        "durationMs": 161763,
+        "outputChars": 1210,
+        "critical": false,
+        "ragRelated": true,
+        "feedbackSummary": "## Suspected Path\n\nBackend\n\n## Evidence To Collect\n\n1. The `/api/health` endpoint logic in `backend/controllers/HealthController.cs`.\n2. Any authentication and authorization middleware used to secure the endpoint.\n\n## Likely Causes\n\n1. Missing authentication and authorization middleware.\n2. Insufficient security measures in the endpoint logic.\n\n## Minimal Diagnostic Steps\n\n1. Review the `/api/health` endpoint logic in `backend/controllers/HealthController.cs` to ensure it checks DB connectivi..."
+      }
+    ],
+    "loops": [
+      {
+        "loop": 1,
+        "startedAt": "2026-08-17T12:44:03.884Z",
+        "reviewCritical": true,
+        "testCritical": true,
+        "reviewRag": true,
+        "testRag": true,
+        "finishedAt": "2026-08-17T12:54:19.856Z",
+        "debugRouted": true
+      }
+    ]
+  }
+}
