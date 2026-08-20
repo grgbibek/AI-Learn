@@ -64,6 +64,49 @@ export interface IngestDocumentResponse {
   store?: string;
 }
 
+export interface IngestedFileResult {
+  title: string;
+  chunksCreated?: number;
+  documentId?: string;
+  flaggedSuspicious?: boolean;
+  suspiciousPhrases?: string[];
+}
+
+export interface RejectedFileResult {
+  fileName: string;
+  reason: string;
+}
+
+export interface IngestFilesResponse {
+  filesIngested: number;
+  chunksCreated?: number;
+  ingested: IngestedFileResult[];
+  rejected: RejectedFileResult[];
+  store?: string;
+}
+
+export interface IngestedFolderFileResult {
+  relativePath: string;
+  chunksCreated: number;
+}
+
+export interface SkippedFolderFileResult {
+  relativePath: string;
+  reason: string;
+}
+
+export interface IngestFolderResponse {
+  folderPath: string;
+  projectName?: string;
+  filesScanned: number;
+  filesIngested: number;
+  chunksCreated: number;
+  ingested: IngestedFolderFileResult[];
+  skipped: SkippedFolderFileResult[];
+  elapsedSeconds: number;
+  store?: string;
+}
+
 export interface KernelMemoryPartition {
   sanitizedText: string;
   relevance: number;
@@ -86,5 +129,7 @@ export interface AskKnowledgeBaseResponse {
   rerankMethod?: string;
   store?: string;
   sources: KnowledgeSource[];
+  toolCallCount?: number;
+  searchQueries?: string[];
 }
 

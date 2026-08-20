@@ -7,10 +7,12 @@ import {
   StreamingAssistantResponse,
   SemanticSimilarityResponse,
   IngestDocumentResponse,
+  IngestFilesResponse,
+  IngestFolderResponse,
   AskKnowledgeBaseResponse
 } from '../models/ai.model';
 
-export type KnowledgeBaseMode = 'sqlHybrid' | 'kernelMemory';
+export type KnowledgeBaseMode = 'sqlHybrid' | 'kernelMemory' | 'agentic';
 
 @Injectable({
   providedIn: 'root'
@@ -113,6 +115,10 @@ export class AiService {
 
   readonly ingestLoading = signal<boolean>(false);
   readonly ingestResult = signal<IngestDocumentResponse | null>(null);
+  readonly ingestFilesResult = signal<IngestFilesResponse | null>(null);
+  readonly ingestFolderLoading = signal<boolean>(false);
+  readonly ingestFolderResult = signal<IngestFolderResponse | null>(null);
+  readonly ingestFolderError = signal<string | null>(null);
   readonly ingestError = signal<string | null>(null);
 
   readonly askLoading = signal<boolean>(false);
@@ -124,6 +130,7 @@ export class AiService {
     this.ingestLoading.set(true);
     this.ingestError.set(null);
     this.ingestResult.set(null);
+    this.ingestFilesResult.set(null);
 
     const url = mode === 'kernelMemory'
       ? `${this.ragUrl}/kernel-memory/ingest`
@@ -142,11 +149,79 @@ export class AiService {
     });
   }
 
+  ingestMarkdownFiles(files: File[], mode: KnowledgeBaseMode): void {
+    this.ingestLoading.set(true);
+    this.ingestError.set(null);
+    this.ingestResult.set(null);
+    this.ingestFilesResult.set(null);
+
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file, file.name));
+
+    const url = mode === 'kernelMemory'
+      ? `${this.ragUrl}/kernel-memory/ingest-files`
+      : `${this.ragUrl}/ingest-files`;
+
+    this.http.post<IngestFilesResponse>(url, formData).subscribe({
+      next: (result) => {
+        this.ingestFilesResult.set(result);
+        this.ingestLoading.set(false);
+      },
+      error: (err: unknown) => {
+        console.error('Failed to ingest Markdown files', err);
+        this.ingestError.set('File ingest failed. Choose one or more .md files and make sure the backend/Ollama is running.');
+        this.ingestLoading.set(false);
+      }
+    });
+  }
+
+  // Indexes a whole project folder on the backend's local disk in one call (Level 2 ingestion).
+  ingestFolder(folderPath: string, projectName: string, mode: KnowledgeBaseMode): void {
+    this.ingestFolderLoading.set(true);
+    this.ingestFolderError.set(null);
+    this.ingestFolderResult.set(null);
+
+    const url = mode === 'kernelMemory'
+      ? `${this.ragUrl}/kernel-memory/ingest-folder`
+      : `${this.ragUrl}/ingest-folder`;
+
+    this.http.post<IngestFolderResponse>(url, { folderPath, projectName: projectName || undefined }).subscribe({
+      next: (result) => {
+        this.ingestFolderResult.set(result);
+        this.ingestFolderLoading.set(false);
+      },
+      error: (err: unknown) => {
+        console.error('Failed to ingest project folder', err);
+        const message = (err as { error?: { message?: string } })?.error?.message;
+        this.ingestFolderError.set(
+          message ?? 'Folder ingest failed. Check the folder path is inside an allowed root and the backend/Ollama is running.'
+        );
+        this.ingestFolderLoading.set(false);
+      }
+    });
+  }
+
   // Streams the answer token-by-token over Server-Sent Events instead of waiting for the full response.
   askKnowledgeBase(question: string, topK = 3, mode: KnowledgeBaseMode): void {
     this.askLoading.set(true);
     this.askError.set(null);
     this.askResult.set({ question, answer: '', rerankMethod: '', sources: [] });
+
+    if (mode === 'agentic') {
+      this.askAbortController = null;
+      this.http.post<AskKnowledgeBaseResponse>(`${this.ragUrl}/agentic/ask`, { question, topK }).subscribe({
+        next: (result) => {
+          this.askResult.set(result);
+          this.askLoading.set(false);
+        },
+        error: (err: unknown) => {
+          console.error('Failed to query agentic knowledge base', err);
+          this.askError.set('Agentic ask failed. Ingest a document first, and make sure the backend/Ollama is running.');
+          this.askLoading.set(false);
+        }
+      });
+      return;
+    }
 
     if (mode === 'kernelMemory') {
       this.askAbortController = null;

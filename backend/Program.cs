@@ -30,6 +30,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddMemoryCache();
 builder.Services.Configure<AiUsageBudgetOptions>(builder.Configuration.GetSection("AiUsageBudget"));
 builder.Services.Configure<SeedAdminOptions>(builder.Configuration.GetSection("SeedAdmin"));
+builder.Services.Configure<RagFolderIngestionOptions>(builder.Configuration.GetSection("RagFolderIngestion"));
 builder.Services.AddScoped<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
 builder.Services.AddScoped<AiUsageRecorder>();
 
@@ -176,6 +177,16 @@ builder.Services.AddSingleton<IChatClient>(
         .UseFunctionInvocation()
         .Build());
 
+// Agentic RAG (Phase 3 extension): a second IChatClient, keyed separately so it doesn't affect the
+// default tool-calling client above, with a hard cap on tool-call iterations. Retrieval becomes a
+// tool the model can call 0+ times instead of a fixed pipeline stage - without a cap, a small local
+// model deciding "should I search again?" could loop far more than a fixed RAG pipeline ever would.
+builder.Services.AddKeyedSingleton<IChatClient>("agentic-rag",
+    ((IChatClient)new OllamaApiClient(ollamaUri, ollamaChatModel))
+        .AsBuilder()
+        .UseFunctionInvocation(configure: client => client.MaximumIterationsPerRequest = 4)
+        .Build());
+
 // Register Vector Math & Embeddings Services (Phase 3)
 builder.Services.AddSingleton<VectorMathService>();
 builder.Services.AddSingleton<TextChunkingService>();
@@ -249,6 +260,8 @@ app.MapUserEndpoints();
 app.MapWorkItemEndpoints();
 app.MapAiEndpoints();
 app.MapRagEndpoints();
+app.MapRagFolderIngestEndpoints();
+app.MapAgenticRagEndpoints();
 app.MapQdrantRagEndpoints();
 app.MapKernelMemoryRagEndpoints();
 app.MapAgentEndpoints();

@@ -16,15 +16,47 @@ export class KnowledgeBaseComponent {
 
   docTitle = signal<string>('');
   docContent = signal<string>('');
+  selectedMarkdownFiles = signal<File[]>([]);
+  folderPath = signal<string>('');
+  folderProjectName = signal<string>('');
   question = signal<string>('');
   mode = signal<KnowledgeBaseMode>('sqlHybrid');
 
   setMode(mode: KnowledgeBaseMode): void {
     this.mode.set(mode);
     this.ai.ingestResult.set(null);
+    this.ai.ingestFilesResult.set(null);
+    this.ai.ingestFolderResult.set(null);
     this.ai.askResult.set(null);
     this.ai.ingestError.set(null);
+    this.ai.ingestFolderError.set(null);
     this.ai.askError.set(null);
+  }
+
+  onMarkdownFilesSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const files = Array.from(input.files ?? []);
+    this.selectedMarkdownFiles.set(files);
+    this.ai.ingestFilesResult.set(null);
+    this.ai.ingestError.set(null);
+  }
+
+  onIngestFiles(): void {
+    const files = this.selectedMarkdownFiles();
+    if (files.length === 0) {
+      return;
+    }
+
+    this.ai.ingestMarkdownFiles(files, this.mode());
+  }
+
+  onIngestFolder(): void {
+    const folderPath = this.folderPath().trim();
+    if (!folderPath) {
+      return;
+    }
+
+    this.ai.ingestFolder(folderPath, this.folderProjectName().trim(), this.mode());
   }
 
   onIngest(): void {

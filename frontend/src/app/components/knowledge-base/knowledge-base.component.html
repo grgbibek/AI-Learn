@@ -24,12 +24,104 @@
     >
       Kernel Memory
     </button>
+    <button
+      type="button"
+      class="rag-mode-option"
+      [class.active]="mode() === 'agentic'"
+      (click)="setMode('agentic')"
+    >
+      Agentic Tool-Calling
+    </button>
   </div>
 
   <div class="rag-grid">
     <!-- Ingest -->
     <div class="rag-card">
-      <h4>1. Ingest a Document</h4>
+      <h4>1. Ingest Knowledge</h4>
+      <label class="rag-file-picker">
+        <span>Upload Markdown files</span>
+        <input
+          type="file"
+          accept=".md,text/markdown,text/plain"
+          multiple
+          (change)="onMarkdownFilesSelected($event)"
+        />
+      </label>
+
+      @if (selectedMarkdownFiles().length > 0) {
+        <div class="rag-file-list">
+          <strong>{{ selectedMarkdownFiles().length }} file(s) selected</strong>
+          <ul>
+            @for (file of selectedMarkdownFiles(); track file.name) {
+              <li>{{ file.name }}</li>
+            }
+          </ul>
+        </div>
+      }
+
+      <button
+        (click)="onIngestFiles()"
+        [disabled]="ai.ingestLoading() || selectedMarkdownFiles().length === 0"
+        class="btn-action btn-ai"
+      >
+        @if (ai.ingestLoading() && selectedMarkdownFiles().length > 0) {
+          Uploading Markdown…
+        } @else {
+          Upload Selected Markdown
+        }
+      </button>
+
+      <div class="rag-divider"><span>or index a project folder on this machine</span></div>
+
+      <input
+        type="text"
+        placeholder="Folder path, e.g. C:\Users\...\Rapid\rqi.api.records"
+        [ngModel]="folderPath()"
+        (ngModelChange)="folderPath.set($event)"
+        class="rag-input"
+      />
+      <input
+        type="text"
+        placeholder="Project name (optional), e.g. rqi.api.records"
+        [ngModel]="folderProjectName()"
+        (ngModelChange)="folderProjectName.set($event)"
+        class="rag-input"
+      />
+      <button
+        (click)="onIngestFolder()"
+        [disabled]="ai.ingestFolderLoading() || !folderPath().trim()"
+        class="btn-action btn-ai"
+      >
+        @if (ai.ingestFolderLoading()) {
+          Indexing folder…
+        } @else {
+          📁 Index Folder
+        }
+      </button>
+
+      @if (ai.ingestFolderError(); as err) {
+        <p class="rag-error">{{ err }}</p>
+      }
+      @if (ai.ingestFolderResult(); as result) {
+        <div class="rag-success-box">
+          <p class="rag-success">
+            ✅ Indexed {{ result.filesIngested }}/{{ result.filesScanned }} file(s) as {{ result.chunksCreated }} chunk(s) in {{ result.elapsedSeconds }}s.
+          </p>
+          @if (result.skipped.length > 0) {
+            <div class="rag-rejected-files">
+              <strong>{{ result.skipped.length }} file(s) skipped</strong>
+              <ul>
+                @for (file of result.skipped; track file.relativePath) {
+                  <li>{{ file.relativePath }}: {{ file.reason }}</li>
+                }
+              </ul>
+            </div>
+          }
+        </div>
+      }
+
+      <div class="rag-divider"><span>or paste one document</span></div>
+
       <input
         type="text"
         placeholder="Document title, e.g. AGENTS.md"
@@ -68,6 +160,40 @@
           }
         </p>
       }
+      @if (ai.ingestFilesResult(); as result) {
+        <div class="rag-success-box">
+          <p class="rag-success">
+            ✅ Uploaded {{ result.filesIngested }} Markdown file(s)
+            @if (result.chunksCreated !== undefined) {
+              as {{ result.chunksCreated }} chunk(s)
+            }
+            @if (mode() === 'kernelMemory') {
+              into {{ result.store }}
+            }
+            .
+          </p>
+          <ul>
+            @for (file of result.ingested; track file.title) {
+              <li>
+                {{ file.title }}
+                @if (file.chunksCreated !== undefined) {
+                  · {{ file.chunksCreated }} chunk(s)
+                }
+              </li>
+            }
+          </ul>
+          @if (result.rejected.length > 0) {
+            <div class="rag-rejected-files">
+              <strong>{{ result.rejected.length }} file(s) skipped</strong>
+              <ul>
+                @for (file of result.rejected; track file.fileName) {
+                  <li>{{ file.fileName }}: {{ file.reason }}</li>
+                }
+              </ul>
+            </div>
+          }
+        </div>
+      }
     </div>
 
     <!-- Ask -->
@@ -86,6 +212,8 @@
           @if (ai.askLoading()) {
             @if (mode() === 'kernelMemory') {
               Querying memory…
+            } @else if (mode() === 'agentic') {
+              Agent searching &amp; reasoning…
             } @else {
               Retrieving &amp; thinking…
             }
@@ -113,7 +241,21 @@
           }
           <div class="rag-sources">
             <strong>Sources</strong>
-            @if (mode() === 'kernelMemory') {
+            @if (mode() === 'agentic') {
+              <span class="rag-rerank-badge">{{ result.toolCallCount }} search tool call(s)</span>
+              @if (result.searchQueries && result.searchQueries.length > 0) {
+                <div class="rag-file-list">
+                  <strong>Queries the agent chose to search</strong>
+                  <ul>
+                    @for (query of result.searchQueries; track $index) {
+                      <li>{{ query }}</li>
+                    }
+                  </ul>
+                </div>
+              } @else {
+                <p class="rag-success">Answered without searching the knowledge base.</p>
+              }
+            } @else if (mode() === 'kernelMemory') {
               <span class="rag-rerank-badge">{{ result.store }}</span>
               <div class="rag-km-sources">
                 @for (source of result.sources; track $index) {

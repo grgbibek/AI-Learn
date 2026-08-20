@@ -6,9 +6,12 @@ using TaskFlow.Api.Data;
 namespace TaskFlow.Api.Endpoints;
 
 public record AskKernelMemoryRequest(string Question);
+public record KernelMemoryIngestFileResult(string Title, string DocumentId, bool FlaggedSuspicious, IReadOnlyList<string> SuspiciousPhrases, object Sanitization);
 
 public static class KernelMemoryRagEndpoints
 {
+    private const long MaxMarkdownFileBytes = 2 * 1024 * 1024;
+
     public static IEndpointRouteBuilder MapKernelMemoryRagEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/rag/kernel-memory")
@@ -21,29 +24,99 @@ public static class KernelMemoryRagEndpoints
             [FromServices] DataSanitizationService dataSanitizer,
             CancellationToken ct) =>
         {
-            var titleSanitization = dataSanitizer.Sanitize(request.Title);
-            var contentSanitization = dataSanitizer.Sanitize(request.Content);
-            if (string.IsNullOrWhiteSpace(contentSanitization.SanitizedText))
+            if (string.IsNullOrWhiteSpace(request.Content))
             {
                 return Results.BadRequest(new { Message = "No content to ingest." });
             }
 
-            var suspiciousPhrases = PromptGuard.ScanForInjectionAttempt(request.Content);
-            var documentId = await memory.ImportTextAsync(
-                $"Title: {titleSanitization.SanitizedText}\n\n{contentSanitization.SanitizedText}",
-                documentId: CreateDocumentId(titleSanitization.SanitizedText),
-                cancellationToken: ct);
+            var result = await IngestKernelMemoryDocumentAsync(request.Title, request.Content, memory, dataSanitizer, ct);
 
             return Results.Ok(new
             {
-                Title = titleSanitization.SanitizedText,
-                DocumentId = documentId,
+                result.Title,
+                result.DocumentId,
                 Store = "Kernel Memory serverless in-memory store",
-                FlaggedSuspicious = suspiciousPhrases.Count > 0,
-                SuspiciousPhrases = suspiciousPhrases,
-                Sanitization = BuildSanitizationSummary(titleSanitization, contentSanitization)
+                result.FlaggedSuspicious,
+                result.SuspiciousPhrases,
+                result.Sanitization
             });
         })
+        .RequireAuthorization(AuthPolicies.CanIngestKnowledge)
+        .RequireRateLimiting(RateLimitPolicies.KnowledgeIngest)
+        .AddEndpointFilter(new AiUsageBudgetFilter(RateLimitPolicies.KnowledgeIngest));
+
+        group.MapPost("/ingest-files", async (
+            HttpRequest request,
+            [FromServices] IKernelMemory memory,
+            [FromServices] DataSanitizationService dataSanitizer,
+            CancellationToken ct) =>
+        {
+            if (!request.HasFormContentType)
+            {
+                return Results.BadRequest(new { Message = "Upload Markdown files as multipart/form-data." });
+            }
+
+            var form = await request.ReadFormAsync(ct);
+            if (form.Files.Count == 0)
+            {
+                return Results.BadRequest(new { Message = "Choose at least one Markdown file to ingest." });
+            }
+
+            var ingested = new List<KernelMemoryIngestFileResult>();
+            var rejected = new List<object>();
+
+            foreach (var file in form.Files)
+            {
+                if (!IsMarkdownFile(file.FileName))
+                {
+                    rejected.Add(new { file.FileName, Reason = "Only .md Markdown files are supported." });
+                    continue;
+                }
+
+                if (file.Length <= 0)
+                {
+                    rejected.Add(new { file.FileName, Reason = "File is empty." });
+                    continue;
+                }
+
+                if (file.Length > MaxMarkdownFileBytes)
+                {
+                    rejected.Add(new { file.FileName, Reason = $"File is larger than {MaxMarkdownFileBytes / 1024 / 1024} MB." });
+                    continue;
+                }
+
+                await using var stream = file.OpenReadStream();
+                using var reader = new StreamReader(stream);
+                var content = await reader.ReadToEndAsync(ct);
+
+                if (string.IsNullOrWhiteSpace(content))
+                {
+                    rejected.Add(new { file.FileName, Reason = "File has no readable Markdown content." });
+                    continue;
+                }
+
+                ingested.Add(await IngestKernelMemoryDocumentAsync(
+                    Path.GetFileName(file.FileName),
+                    content,
+                    memory,
+                    dataSanitizer,
+                    ct));
+            }
+
+            if (ingested.Count == 0)
+            {
+                return Results.BadRequest(new { Message = "No Markdown files were ingested.", Rejected = rejected });
+            }
+
+            return Results.Ok(new
+            {
+                FilesIngested = ingested.Count,
+                Ingested = ingested,
+                Rejected = rejected,
+                Store = "Kernel Memory serverless in-memory store"
+            });
+        })
+        .DisableAntiforgery()
         .RequireAuthorization(AuthPolicies.CanIngestKnowledge)
         .RequireRateLimiting(RateLimitPolicies.KnowledgeIngest)
         .AddEndpointFilter(new AiUsageBudgetFilter(RateLimitPolicies.KnowledgeIngest));
@@ -100,6 +173,37 @@ public static class KernelMemoryRagEndpoints
             .Trim('-');
 
         return $"km-{(string.IsNullOrWhiteSpace(safeTitle) ? "document" : safeTitle)}-{Guid.NewGuid():N}";
+    }
+
+    private static bool IsMarkdownFile(string fileName) =>
+        string.Equals(Path.GetExtension(fileName), ".md", StringComparison.OrdinalIgnoreCase);
+
+    internal static async Task<KernelMemoryIngestFileResult> IngestKernelMemoryDocumentAsync(
+        string title,
+        string content,
+        IKernelMemory memory,
+        DataSanitizationService dataSanitizer,
+        CancellationToken ct)
+    {
+        var titleSanitization = dataSanitizer.Sanitize(title);
+        var contentSanitization = dataSanitizer.Sanitize(content);
+        if (string.IsNullOrWhiteSpace(contentSanitization.SanitizedText))
+        {
+            throw new InvalidOperationException("No content to ingest.");
+        }
+
+        var suspiciousPhrases = PromptGuard.ScanForInjectionAttempt(content);
+        var documentId = await memory.ImportTextAsync(
+            $"Title: {titleSanitization.SanitizedText}\n\n{contentSanitization.SanitizedText}",
+            documentId: CreateDocumentId(titleSanitization.SanitizedText),
+            cancellationToken: ct);
+
+        return new KernelMemoryIngestFileResult(
+            titleSanitization.SanitizedText,
+            documentId,
+            suspiciousPhrases.Count > 0,
+            suspiciousPhrases,
+            BuildSanitizationSummary(titleSanitization, contentSanitization));
     }
 
     private static object BuildSanitizationSummary(params SanitizationResult[] results)

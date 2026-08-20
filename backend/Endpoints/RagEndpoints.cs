@@ -5,6 +5,8 @@ using Microsoft.Data.SqlTypes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Caching.Memory;
+using Qdrant.Client;
+using Qdrant.Client.Grpc;
 using TaskFlow.Api.Data;
 using TaskFlow.Api.Models;
 
@@ -12,6 +14,7 @@ namespace TaskFlow.Api.Endpoints;
 
 public record IngestDocumentRequest(string Title, string Content);
 public record AskKnowledgeBaseRequest(string Question, int TopK = 3);
+public record IngestFileResult(string Title, int ChunksCreated, bool FlaggedSuspicious, IReadOnlyList<string> SuspiciousPhrases, object Sanitization);
 
 // LLM re-ranker contract: the model only has to reason about relevance and hand back an order.
 public record RerankResult(List<string> RankedIds);
@@ -23,8 +26,13 @@ public record RetrievedChunk(int Id, string SourceTitle, string Content, int Chu
 
 public static class RagEndpoints
 {
+    private const long MaxMarkdownFileBytes = 2 * 1024 * 1024;
+    private const string HybridVectorCollectionName = "hybrid_document_chunks";
+    private const int HybridVectorSize = 768; // matches nomic-embed-text
     private static readonly JsonSerializerOptions SseJsonOptions = new(JsonSerializerDefaults.Web);
     private sealed record SanitizedRetrievedChunk(RetrievedChunk Chunk, SanitizationResult Title, SanitizationResult Content);
+    private sealed record RagCorpusEntry(int Id, string SourceTitle, string Content, int ChunkIndex);
+    private sealed record RagCorpusCache(List<RagCorpusEntry> Entries, HybridSearchService.Bm25Index Bm25Index);
 
     public static IEndpointRouteBuilder MapRagEndpoints(this IEndpointRouteBuilder routes)
     {
@@ -40,43 +48,126 @@ public static class RagEndpoints
             [FromServices] DataSanitizationService dataSanitizer,
             [FromServices] IMemoryCache cache,
             [FromServices] IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
+            [FromServices] QdrantClient qdrant,
             CancellationToken ct) =>
         {
-            var titleSanitization = dataSanitizer.Sanitize(request.Title);
-            var contentSanitization = dataSanitizer.Sanitize(request.Content);
-            var chunks = chunker.ChunkText(contentSanitization.SanitizedText);
-            if (chunks.Count == 0)
+            if (string.IsNullOrWhiteSpace(request.Content))
             {
                 return Results.BadRequest(new { Message = "No content to ingest." });
             }
 
-            // Flag, don't block: RAG legitimately needs to store arbitrary content, but callers
-            // should know if a document contains phrasing commonly used in prompt-injection attempts.
-            var suspiciousPhrases = PromptGuard.ScanForInjectionAttempt(request.Content);
-
-            var embeddings = await embeddingGenerator.GenerateAsync(chunks, cancellationToken: ct);
-
-            var documentChunks = chunks.Select((text, index) => new DocumentChunk
+            try
             {
-                SourceTitle = titleSanitization.SanitizedText,
-                Content = text,
-                ChunkIndex = index,
-                Embedding = new SqlVector<float>(embeddings[index].Vector)
-            }).ToList();
+                var result = await IngestSqlDocumentAsync(
+                    request.Title,
+                    request.Content,
+                    db,
+                    chunker,
+                    dataSanitizer,
+                    cache,
+                    embeddingGenerator,
+                    qdrant,
+                    ct);
 
-            db.DocumentChunks.AddRange(documentChunks);
-            await db.SaveChangesAsync(ct);
-            cache.Remove(AppCacheKeys.AnalyticsMetrics);
+                return Results.Ok(new
+                {
+                    result.Title,
+                    result.ChunksCreated,
+                    result.FlaggedSuspicious,
+                    result.SuspiciousPhrases,
+                    result.Sanitization
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { Message = ex.Message });
+            }
+        })
+        .RequireAuthorization(AuthPolicies.CanIngestKnowledge)
+        .RequireRateLimiting(RateLimitPolicies.KnowledgeIngest)
+        .AddEndpointFilter(new AiUsageBudgetFilter(RateLimitPolicies.KnowledgeIngest));
+
+        group.MapPost("/ingest-files", async (
+            HttpRequest request,
+            [FromServices] AppDbContext db,
+            [FromServices] TextChunkingService chunker,
+            [FromServices] DataSanitizationService dataSanitizer,
+            [FromServices] IMemoryCache cache,
+            [FromServices] IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
+            [FromServices] QdrantClient qdrant,
+            CancellationToken ct) =>
+        {
+            if (!request.HasFormContentType)
+            {
+                return Results.BadRequest(new { Message = "Upload Markdown files as multipart/form-data." });
+            }
+
+            var form = await request.ReadFormAsync(ct);
+            if (form.Files.Count == 0)
+            {
+                return Results.BadRequest(new { Message = "Choose at least one Markdown file to ingest." });
+            }
+
+            var ingested = new List<IngestFileResult>();
+            var rejected = new List<object>();
+
+            foreach (var file in form.Files)
+            {
+                if (!IsMarkdownFile(file.FileName))
+                {
+                    rejected.Add(new { file.FileName, Reason = "Only .md Markdown files are supported." });
+                    continue;
+                }
+
+                if (file.Length <= 0)
+                {
+                    rejected.Add(new { file.FileName, Reason = "File is empty." });
+                    continue;
+                }
+
+                if (file.Length > MaxMarkdownFileBytes)
+                {
+                    rejected.Add(new { file.FileName, Reason = $"File is larger than {MaxMarkdownFileBytes / 1024 / 1024} MB." });
+                    continue;
+                }
+
+                await using var stream = file.OpenReadStream();
+                using var reader = new StreamReader(stream);
+                var content = await reader.ReadToEndAsync(ct);
+
+                if (string.IsNullOrWhiteSpace(content))
+                {
+                    rejected.Add(new { file.FileName, Reason = "File has no readable Markdown content." });
+                    continue;
+                }
+
+                var title = Path.GetFileName(file.FileName);
+                ingested.Add(await IngestSqlDocumentAsync(
+                    title,
+                    content,
+                    db,
+                    chunker,
+                    dataSanitizer,
+                    cache,
+                    embeddingGenerator,
+                    qdrant,
+                    ct));
+            }
+
+            if (ingested.Count == 0)
+            {
+                return Results.BadRequest(new { Message = "No Markdown files were ingested.", Rejected = rejected });
+            }
 
             return Results.Ok(new
             {
-                Title = titleSanitization.SanitizedText,
-                ChunksCreated = documentChunks.Count,
-                FlaggedSuspicious = suspiciousPhrases.Count > 0,
-                SuspiciousPhrases = suspiciousPhrases,
-                Sanitization = BuildSanitizationSummary(titleSanitization, contentSanitization)
+                FilesIngested = ingested.Count,
+                ChunksCreated = ingested.Sum(file => file.ChunksCreated),
+                Ingested = ingested,
+                Rejected = rejected
             });
         })
+        .DisableAntiforgery()
         .RequireAuthorization(AuthPolicies.CanIngestKnowledge)
         .RequireRateLimiting(RateLimitPolicies.KnowledgeIngest)
         .AddEndpointFilter(new AiUsageBudgetFilter(RateLimitPolicies.KnowledgeIngest));
@@ -91,12 +182,14 @@ public static class RagEndpoints
             [FromServices] IChatClient chatClient,
             [FromServices] DataSanitizationService dataSanitizer,
             [FromServices] AiUsageRecorder usageRecorder,
+            [FromServices] IMemoryCache cache,
+            [FromServices] QdrantClient qdrant,
             CancellationToken ct) =>
         {
             var questionSanitization = dataSanitizer.Sanitize(request.Question);
             var topK = request.TopK <= 0 ? 3 : request.TopK;
             var (finalChunks, rerankMethod) = await RetrieveAndRerankAsync(
-                questionSanitization.SanitizedText, topK, db, embeddingGenerator, hybridSearch, chatClient, ct);
+                questionSanitization.SanitizedText, topK, db, embeddingGenerator, hybridSearch, chatClient, cache, qdrant, ct);
 
             if (finalChunks.Count == 0)
             {
@@ -158,12 +251,14 @@ public static class RagEndpoints
             [FromServices] HybridSearchService hybridSearch,
             [FromServices] IChatClient chatClient,
             [FromServices] DataSanitizationService dataSanitizer,
+            [FromServices] IMemoryCache cache,
+            [FromServices] QdrantClient qdrant,
             CancellationToken ct) =>
         {
             var questionSanitization = dataSanitizer.Sanitize(request.Question);
             var topK = request.TopK <= 0 ? 3 : request.TopK;
             var (finalChunks, rerankMethod) = await RetrieveAndRerankAsync(
-                questionSanitization.SanitizedText, topK, db, embeddingGenerator, hybridSearch, chatClient, ct);
+                questionSanitization.SanitizedText, topK, db, embeddingGenerator, hybridSearch, chatClient, cache, qdrant, ct);
 
             if (finalChunks.Count == 0)
             {
@@ -262,51 +357,173 @@ public static class RagEndpoints
         };
     }
 
+    private static bool IsMarkdownFile(string fileName) =>
+        string.Equals(Path.GetExtension(fileName), ".md", StringComparison.OrdinalIgnoreCase);
+
+    // Cache-aside: BM25 needs every chunk's Content, which used to be re-fetched from SQL on every
+    // single question. Invalidated by IngestSqlDocumentAsync whenever new chunks land.
+    // Cache-aside: BM25 needs a tokenized index over every chunk, which used to be rebuilt from
+    // scratch on every single question. Invalidated by IngestSqlDocumentAsync whenever new chunks land.
+    private static async Task<RagCorpusCache> GetCachedCorpusAsync(AppDbContext db, IMemoryCache cache, HybridSearchService hybridSearch, CancellationToken ct)
+    {
+        if (cache.TryGetValue(AppCacheKeys.RagBm25Corpus, out RagCorpusCache? cached) && cached is not null)
+        {
+            return cached;
+        }
+
+        var corpus = await db.DocumentChunks
+            .AsNoTracking()
+            .Select(c => new RagCorpusEntry(c.Id, c.SourceTitle, c.Content, c.ChunkIndex))
+            .ToListAsync(ct);
+
+        var index = hybridSearch.BuildIndex(corpus.Select(c => c.Content).ToList());
+        var result = new RagCorpusCache(corpus, index);
+        cache.Set(AppCacheKeys.RagBm25Corpus, result, TimeSpan.FromMinutes(10));
+        return result;
+    }
+
+    private static async Task EnsureHybridCollectionExistsAsync(QdrantClient qdrant, CancellationToken ct)
+    {
+        if (!await qdrant.CollectionExistsAsync(HybridVectorCollectionName, ct))
+        {
+            await qdrant.CreateCollectionAsync(
+                HybridVectorCollectionName,
+                new VectorParams { Size = HybridVectorSize, Distance = Distance.Cosine },
+                cancellationToken: ct);
+        }
+    }
+
+    internal static async Task<IngestFileResult> IngestSqlDocumentAsync(
+        string title,
+        string content,
+        AppDbContext db,
+        TextChunkingService chunker,
+        DataSanitizationService dataSanitizer,
+        IMemoryCache cache,
+        IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
+        QdrantClient qdrant,
+        CancellationToken ct)
+    {
+        var titleSanitization = dataSanitizer.Sanitize(title);
+        var contentSanitization = dataSanitizer.Sanitize(content);
+        var chunks = chunker.ChunkText(contentSanitization.SanitizedText);
+        if (chunks.Count == 0)
+        {
+            throw new InvalidOperationException("No content to ingest.");
+        }
+
+        var suspiciousPhrases = PromptGuard.ScanForInjectionAttempt(content);
+        var embeddings = await embeddingGenerator.GenerateAsync(chunks, cancellationToken: ct);
+
+        var documentChunks = chunks.Select((text, index) => new DocumentChunk
+        {
+            SourceTitle = titleSanitization.SanitizedText,
+            Content = text,
+            ChunkIndex = index,
+            Embedding = new SqlVector<float>(embeddings[index].Vector)
+        }).ToList();
+
+        db.DocumentChunks.AddRange(documentChunks);
+        await db.SaveChangesAsync(ct);
+
+        // Dual-write: SQL keeps Content/Embedding for BM25 + audit; Qdrant gets the same vectors for
+        // fast ANN search, keyed by the SQL-generated id so retrieval can join the two back together.
+        try
+        {
+            await EnsureHybridCollectionExistsAsync(qdrant, ct);
+            var points = documentChunks.Select((chunk, index) => new PointStruct
+            {
+                Id = (ulong)chunk.Id,
+                Vectors = embeddings[index].Vector.ToArray(),
+                Payload = { ["sourceTitle"] = chunk.SourceTitle, ["chunkIndex"] = chunk.ChunkIndex }
+            }).ToList();
+            await qdrant.UpsertAsync(HybridVectorCollectionName, points, cancellationToken: ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // The SQL rows above are already committed - surface this as a clear, catchable ingest
+            // failure rather than a raw gRPC/connection exception bubbling up as an unhandled 500.
+            throw new InvalidOperationException(
+                $"Ingested into SQL but Qdrant (vector store) is unreachable: {ex.Message}. Is the standalone Qdrant server running on localhost:6334?", ex);
+        }
+
+        cache.Remove(AppCacheKeys.AnalyticsMetrics);
+        cache.Remove(AppCacheKeys.RagBm25Corpus);
+
+        return new IngestFileResult(
+            titleSanitization.SanitizedText,
+            documentChunks.Count,
+            suspiciousPhrases.Count > 0,
+            suspiciousPhrases,
+            BuildSanitizationSummary(titleSanitization, contentSanitization));
+    }
+
     // Stages 1-3 of hybrid search: vector + BM25 retrieval, Reciprocal Rank Fusion, then LLM re-ranking
     // of the fused candidate pool down to the final TopK. Shared by both the plain and streaming /ask endpoints.
-    private static async Task<(List<RetrievedChunk> FinalChunks, string RerankMethod)> RetrieveAndRerankAsync(
+    internal static async Task<(List<RetrievedChunk> FinalChunks, string RerankMethod)> RetrieveAndRerankAsync(
         string question,
         int topK,
         AppDbContext db,
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
         HybridSearchService hybridSearch,
         IChatClient chatClient,
+        IMemoryCache cache,
+        QdrantClient qdrant,
         CancellationToken ct)
     {
-        // ── Stage 1a: keyword corpus - lightweight projection, no embeddings transferred ──
-        var corpus = await db.DocumentChunks
-            .AsNoTracking()
-            .Select(c => new { c.Id, c.SourceTitle, c.Content, c.ChunkIndex })
-            .ToListAsync(ct);
+        // ── Stage 1: keyword corpus (cached, invalidated on ingest) and question embedding run concurrently ──
+        var corpusTask = GetCachedCorpusAsync(db, cache, hybridSearch, ct);
+        var embeddingTask = embeddingGenerator.GenerateAsync(question, cancellationToken: ct);
+        await Task.WhenAll(corpusTask, embeddingTask);
 
+        var corpusCache = await corpusTask;
+        var corpus = corpusCache.Entries;
         if (corpus.Count == 0)
         {
             return ([], "empty-knowledge-base");
         }
 
-        // ── Stage 1b: vector similarity computed entirely inside SQL Server via VECTOR_DISTANCE() -
-        //    only ids + a distance scalar come back over the wire; the embedding arrays themselves
-        //    never leave the database or get deserialized into app memory.
-        var questionVector = new SqlVector<float>(
-            (await embeddingGenerator.GenerateAsync(question, cancellationToken: ct)).Vector);
+        var corpusById = corpus.ToDictionary(c => c.Id);
 
-        var vectorDistances = await db.DocumentChunks
-            .AsNoTracking()
-            .Select(c => new { c.Id, Distance = EF.Functions.VectorDistance("cosine", c.Embedding, questionVector) })
-            .OrderBy(x => x.Distance)
-            .ToListAsync(ct);
+        // Only ever need the fused-candidate pool downstream, so cap how much each retrieval leg fetches.
+        var candidatePoolSize = Math.Min(corpus.Count, Math.Max(topK * 3, 6));
 
-        var vectorDistanceById = vectorDistances.ToDictionary(x => x.Id, x => x.Distance);
-        var vectorRanking = vectorDistances.Select(x => x.Id); // already ordered most-similar-first
+        // Vector similarity now runs as an ANN search in Qdrant (HNSW index) instead of a SQL Server
+        // full-scan VECTOR_DISTANCE - only ids + a similarity score come back over the wire.
+        // Falls back to BM25-only if Qdrant is unreachable or the collection doesn't exist yet (e.g.
+        // chunks ingested before this migration haven't been re-ingested, so nothing lives there yet).
+        var vectorScoreById = new Dictionary<int, double>();
+        var vectorRanking = Enumerable.Empty<int>();
+        try
+        {
+            if (await qdrant.CollectionExistsAsync(HybridVectorCollectionName, ct))
+            {
+                var questionVector = embeddingTask.Result.Vector.ToArray();
+                var qdrantHits = await qdrant.QueryAsync(
+                    HybridVectorCollectionName,
+                    questionVector,
+                    limit: (ulong)candidatePoolSize,
+                    payloadSelector: false,
+                    cancellationToken: ct);
 
-        var bm25Scores = hybridSearch.ScoreBm25(question, corpus.Select(c => c.Content).ToList());
+                // Qdrant can hold points for chunks that no longer exist in SQL (e.g. an interrupted
+                // ingest, or a deleted document) - drop those before they ever reach corpusById lookups.
+                var liveHits = qdrantHits.Where(h => corpusById.ContainsKey((int)h.Id.Num)).ToList();
+                vectorScoreById = liveHits.ToDictionary(h => (int)h.Id.Num, h => (double)h.Score);
+                vectorRanking = liveHits.Select(h => (int)h.Id.Num); // already ordered most-similar-first
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Qdrant down/unreachable shouldn't take down the whole knowledge base - keyword search still works.
+        }
+
+        var bm25Scores = hybridSearch.ScoreBm25(question, corpusCache.Bm25Index);
         var bm25ById = corpus.Select((c, i) => (c.Id, Score: bm25Scores[i])).ToDictionary(x => x.Id, x => x.Score);
         var keywordRanking = bm25ById.OrderByDescending(kv => kv.Value).Select(kv => kv.Key);
 
         // ── Stage 2: fuse the two rankings by rank position (Reciprocal Rank Fusion) ──
         var fusedScores = HybridSearchService.ReciprocalRankFusion(60, vectorRanking, keywordRanking);
-        var candidatePoolSize = Math.Min(corpus.Count, Math.Max(topK * 3, 6));
-        var corpusById = corpus.ToDictionary(c => c.Id);
 
         var candidates = fusedScores
             .OrderByDescending(kv => kv.Value)
@@ -314,8 +531,8 @@ public static class RagEndpoints
             .Select(kv =>
             {
                 var c = corpusById[kv.Key];
-                // VECTOR_DISTANCE('cosine', ...) returns a distance (0 = identical); flip to a similarity score for display.
-                var similarity = 1 - vectorDistanceById.GetValueOrDefault(kv.Key, 1);
+                // Qdrant's Cosine-metric score is already a similarity (higher = more similar).
+                var similarity = vectorScoreById.GetValueOrDefault(kv.Key, 0);
                 return new RetrievedChunk(c.Id, c.SourceTitle, c.Content, c.ChunkIndex, similarity, bm25ById.GetValueOrDefault(kv.Key), kv.Value, 0);
             })
             .ToList();
